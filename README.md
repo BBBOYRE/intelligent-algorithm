@@ -8,6 +8,7 @@
 - **本地知识库入库**：解析后分块写入 ChromaDB 本地向量库，纯本地存储，断网亦可使用。
 - **智能问答**：基于知识库 RAG 检索的交互式问答。
 - **模板表格自动填写**：上传 `docx/xlsx` 模板，从知识库中精确检索数据并利用大语言模型全自动回填生成。
+- **一键 Markdown 转 PPT**：内置 Slidev 环境，支持将 Markdown 文本快速转换为精美的项目演示文稿。
 
 ## 🛠️ 技术栈
 
@@ -28,6 +29,7 @@ intelligent-algorithm/
 ├── utils/                # 文件工具类
 ├── data/                 # 运行时动态及静态数据 (模型文件、向量库、上传文件保留处)
 ├── scripts/              # 自动化构建打包脚本中心 (build.py, app.spec, installer.iss)
+├── slidev/               # 项目演示文稿 (Markdown转PPT功能模块)
 ├── config.py             # 后端全局参数与路径映射配置
 ├── main.py               # FastAPI 后端主入口点
 ├── .env                  # 模型 API 密钥及环境配置核心点
@@ -71,3 +73,20 @@ python scripts\build.py
 2. **后端编译**：调用 `pyinstaller scripts/app.spec`，将所有 Python 底层依赖（如 Docling 等）强行收集抽离至 `build/dist/IntelligentDocSystem/_internal` 仓库中。
 3. **安全资产抽离**：为了让客户能够看见环境配置和保证引擎读取本地模型，脚本自动化将 `.env` 配置和数百兆的 `data/models` 模型平滑拷贝剥离到主程序根目录结构中。
 4. **生成桌面安装包**：在 `iscc scripts\installer.iss` 阶段完毕后，一键生成带有自动判断电脑基础环境与解压还原策略的 `Install_IntelligentDocSystem.exe` 最终发行文件，它存放在 `build/Installer` 文件夹中。
+
+## 📊 项目演示文稿 (Slidev PPT)
+
+本项目内置集成了基于 **Slidev** 的 Markdown 转 PPT 功能，方便快速制作和更新项目汇报。
+
+**启动演示与编辑环境**：
+```bash
+cd slidev
+yarn dev
+```
+启动后访问 `http://localhost:3030`，修改 `slidev/slides.md` 将实时生效。
+
+**导出幻灯片为 PDF**：
+```bash
+cd slidev
+yarn export
+```
