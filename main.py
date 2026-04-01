@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description="文档智能系统")
     parser.add_argument("--web", action="store_true", help="以纯 Web 模式启动（不打开本地桌面窗口）")
     parser.add_argument("--port", type=int, default=8199, help="服务端口")
+    parser.add_argument("--debug", action="store_true", help="开启 Debug 模式（允许 F12 开发者工具）")
     args = parser.parse_args()
 
     port = args.port
