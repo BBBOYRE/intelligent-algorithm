@@ -18,8 +18,11 @@ sentence-transformers>=3.0.0
 python-docx>=1.0.0
 openpyxl>=3.1.0
 
-# 前端
-streamlit>=1.38.0
+# API & 桌面端
+fastapi>=0.103.0
+uvicorn>=0.23.2
+python-multipart>=0.0.6
+pywebview>=5.0.0
 
 # 工具
 python-dotenv>=1.0.0
@@ -27,3 +30,4 @@ pydantic>=2.0.0
 
 # 打包
 pyinstaller>=6.0.0
+

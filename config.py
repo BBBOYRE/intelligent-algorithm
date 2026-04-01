@@ -13,7 +13,7 @@ class Config:
 
     # ==================== Embedding 配置 ====================
     EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local")
-    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "./data/models/bge-small-zh-v1.5")
     EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
     EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "")
 

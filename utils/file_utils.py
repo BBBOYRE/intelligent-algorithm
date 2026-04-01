@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import BinaryIO
+from pydantic import BaseModel
 
 from config import Config
 
@@ -13,17 +13,18 @@ def ensure_runtime_dirs() -> None:
     Path(Config.CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
 
 
-def save_uploaded_file(uploaded_file: BinaryIO, target_dir: str | None = None) -> Path:
-    """Persist a Streamlit uploaded file and return the absolute path."""
+async def save_uploaded_file_fastapi(uploaded_file, target_dir: str | None = None) -> Path:
+    """Persist a FastAPI UploadFile and return the absolute path."""
     directory = Path(target_dir or Config.UPLOAD_DIR)
     directory.mkdir(parents=True, exist_ok=True)
 
-    file_name = getattr(uploaded_file, "name", "upload.bin")
+    file_name = getattr(uploaded_file, "filename", "upload.bin")
     output_path = directory / file_name
 
-    content = uploaded_file.getbuffer() if hasattr(uploaded_file, "getbuffer") else uploaded_file.read()
-    output_path.write_bytes(bytes(content))
+    content = await uploaded_file.read()
+    output_path.write_bytes(content)
     return output_path
+
 
 
 def build_output_path(source_name: str, suffix: str | None = None) -> Path:

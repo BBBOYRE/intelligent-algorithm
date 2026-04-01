@@ -14,8 +14,21 @@ def create_embedding_function() -> Any:
 
     if provider == "local":
         from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+        import os
 
-        return SentenceTransformerEmbeddingFunction(model_name=Config.EMBEDDING_MODEL)
+        model_path = Config.EMBEDDING_MODEL
+        # 如果配置的是本地路径且不存在，则自动通过抱脸虫下载
+        if ("/" in model_path or "\\" in model_path) and not os.path.exists(model_path):
+            print(f"[*] 未检测到本地模型 {model_path}，正在自动下载 BAAI/bge-small-zh-v1.5 ...")
+            try:
+                from huggingface_hub import snapshot_download
+                # 如果你需要换别的模型，请把 repo_id 换成对应的
+                snapshot_download(repo_id="BAAI/bge-small-zh-v1.5", local_dir=model_path)
+                print("[*] 模型自动下载完成！")
+            except Exception as e:
+                print(f"[!] 自动下载模型失败，请检查网络或手动下载: {e}")
+
+        return SentenceTransformerEmbeddingFunction(model_name=model_path)
 
     if provider == "openai":
         from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
