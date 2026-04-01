@@ -1,11 +1,12 @@
 from fastapi import APIRouter
-from core.knowledge_base import KnowledgeBase
 
 router = APIRouter()
 
 @router.get("/kb/stats")
 async def get_kb_stats():
     try:
+        from core.knowledge_base import KnowledgeBase
+        
         kb = KnowledgeBase()
         stats = kb.get_stats()
         return stats

@@ -1,7 +1,5 @@
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from core.document_parser import DocumentParser
-from core.knowledge_base import KnowledgeBase
 from utils.file_utils import save_uploaded_file_fastapi
 
 router = APIRouter()
@@ -10,6 +8,9 @@ router = APIRouter()
 async def upload_documents(files: list[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded or parameter 'files' is missing")
+
+    from core.document_parser import DocumentParser
+    from core.knowledge_base import KnowledgeBase
 
     parser = DocumentParser()
     kb = KnowledgeBase()

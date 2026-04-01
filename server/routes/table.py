@@ -1,6 +1,4 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from core.knowledge_base import KnowledgeBase
-from core.table_filler import TableFiller
 from utils.file_utils import build_output_path, save_uploaded_file_fastapi
 
 router = APIRouter()
@@ -17,6 +15,9 @@ async def fill_table_endpoint(file: UploadFile = File(...)):
         filename = getattr(file, "filename", "template.bin")
         output_path = build_output_path(filename)
         
+        from core.knowledge_base import KnowledgeBase
+        from core.table_filler import TableFiller
+
         filler = TableFiller(KnowledgeBase())
         result = filler.fill_template(template_path, output_path)
         return result
