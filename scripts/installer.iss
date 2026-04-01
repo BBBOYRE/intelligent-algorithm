@@ -29,6 +29,9 @@ Name: "{autodesktop}\Intelligent Document System"; Filename: "{app}\IntelligentD
 [Run]
 Filename: "{app}\IntelligentDocSystem.exe"; Description: "{cm:LaunchProgram,Intelligent Document System}"; Flags: nowait postinstall skipifsilent
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
+
 [Code]
 var
   DownloadPage: TDownloadWizardPage;
