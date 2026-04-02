@@ -28,6 +28,11 @@ def create_embedding_function() -> Any:
             except Exception as e:
                 print(f"[!] 自动下载模型失败，请检查网络或手动下载: {e}")
 
+        # 强制将 HuggingFace Hub 和 Transformers 设为脱机模式，防止模型加载时连网检查更新
+        if os.path.exists(model_path):
+            os.environ["HF_HUB_OFFLINE"] = "1"
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
         return SentenceTransformerEmbeddingFunction(model_name=model_path)
 
     if provider == "openai":
