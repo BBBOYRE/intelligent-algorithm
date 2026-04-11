@@ -1,0 +1,49 @@
+import os
+import sys
+import shutil
+from fastapi import UploadFile
+
+def get_base_dir() -> str:
+    """极其关键：获取真实的运行根目录，完美兼容 PyInstaller 与开发环境"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的 EXE 运行，获取 EXE 文件所在的真实物理路径
+        return os.path.dirname(sys.executable)
+    else:
+        # 开发环境下，返回项目根目录 (即 utils 文件夹的上一级)
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 统一管理所有核心路径，基于绝对路径
+BASE_DIR = get_base_dir()
+DATA_DIR = os.path.join(BASE_DIR, "data")
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+OUTPUT_DIR = os.path.join(DATA_DIR, "output")
+DB_DIR = os.path.join(DATA_DIR, "db")
+
+def ensure_runtime_dirs():
+    """确保所有运行时需要的文件夹都存在，如果不存在则立刻自动创建"""
+    for d in [DATA_DIR, UPLOAD_DIR, OUTPUT_DIR, DB_DIR]:
+        os.makedirs(d, exist_ok=True)
+
+async def save_uploaded_file_fastapi(file: UploadFile) -> str:
+    """保存前端上传的文件，保证路径绝对安全"""
+    ensure_runtime_dirs()
+    
+    # 获取安全的文件名
+    filename = getattr(file, "filename", "temp_file.bin")
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    # 写入文件
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return file_path
+
+def build_output_path(filename: str) -> str:
+    """构建输出文件（如填好的表格）的保存路径"""
+    ensure_runtime_dirs()
+    return os.path.join(OUTPUT_DIR, filename)
+
+# 如果你的其他代码里还用到了 get_upload_dir 等函数，为了兼容性可以在下面补上：
+def get_upload_dir() -> str:
+    ensure_runtime_dirs()
+    return UPLOAD_DIR
