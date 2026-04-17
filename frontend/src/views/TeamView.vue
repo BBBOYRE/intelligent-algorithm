@@ -17,8 +17,21 @@
       <n-button type="primary" @click="showCreateModal = true">+ 创建团队</n-button>
     </div>
 
+    <!-- 加载中 -->
+    <div v-if="loading" style="text-align:center;padding:4rem 0;color:var(--text-secondary)">
+      <div class="spinner spinner-lg" style="margin:0 auto 1rem"></div>
+      <p>加载中...</p>
+    </div>
+
+    <!-- 加载出错 -->
+    <div v-else-if="loadError" class="empty-state">
+      <div class="empty-icon">⚠️</div>
+      <p>{{ loadError }}</p>
+      <n-button type="primary" size="small" style="margin-top:1rem" @click="loadTeams">重试</n-button>
+    </div>
+
     <!-- 团队详情 -->
-    <template v-if="currentTeam">
+    <template v-else-if="currentTeam">
       <div class="card-static team-info">
         <div class="team-meta">
           <div class="team-name">{{ currentTeam.name }}</div>
@@ -47,7 +60,7 @@
 
     <div v-else-if="teams.length === 0" class="empty-state">
       <div class="empty-icon">👥</div>
-      <p>还没有团队，创建一个开始协作吧</p>
+      <p>还没有团队，点击上方「创建团队」开始协作吧</p>
     </div>
 
     <!-- 创建团队弹窗 -->
@@ -119,6 +132,8 @@ const currentTeamId = ref(null)
 const currentTeam = ref(null)
 const members = ref([])
 const myRole = ref('member')
+const loading = ref(true)
+const loadError = ref('')
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -166,13 +181,20 @@ const memberColumns = computed(() => [
 ])
 
 const loadTeams = async () => {
+  loading.value = true
+  loadError.value = ''
   try {
     teams.value = await api.listTeams()
     if (teams.value.length && !currentTeamId.value) {
       currentTeamId.value = teams.value[0].id
       await loadTeamDetail(currentTeamId.value)
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.error('loadTeams error:', e)
+    loadError.value = e?.response?.data?.detail || e?.message || '加载团队列表失败'
+  } finally {
+    loading.value = false
+  }
 }
 
 const loadTeamDetail = async (teamId) => {
@@ -182,7 +204,10 @@ const loadTeamDetail = async (teamId) => {
     members.value = detail.members || []
     const me = teams.value.find(t => t.id === teamId)
     myRole.value = me?.my_role || 'member'
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.error('loadTeamDetail error:', e)
+    message.error(e?.response?.data?.detail || '加载团队详情失败')
+  }
 }
 
 const onTeamChange = (id) => {
