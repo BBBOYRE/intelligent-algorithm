@@ -77,8 +77,8 @@ onMounted(() => {
 <style scoped>
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-subtle);
+  background: var(--accent-blue);
+  border-right: none;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -97,7 +97,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .collapsed .sidebar-header {
   justify-content: center;
@@ -114,15 +114,13 @@ onMounted(() => {
 .logo-text {
   font-weight: 700;
   font-size: 1.125rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-yellow);
   white-space: nowrap;
 }
 .toggle-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.6);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: var(--radius-sm);
@@ -132,8 +130,8 @@ onMounted(() => {
   transition: all var(--transition-fast);
 }
 .toggle-btn:hover {
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
 }
 .sidebar-nav {
   flex: 1;
@@ -149,7 +147,7 @@ onMounted(() => {
   gap: 1rem;
   padding: 0.875rem 1rem;
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.7);
   font-weight: 500;
   transition: all var(--transition-fast);
   white-space: nowrap;
@@ -160,18 +158,19 @@ onMounted(() => {
   padding: 0.875rem 0;
 }
 .nav-item:hover {
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
   transform: translateX(4px);
 }
 .collapsed .nav-item:hover {
   transform: translateY(-2px);
 }
 .nav-item.router-link-active {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--accent-yellow);
   color: var(--accent-blue);
-  border-right: 3px solid var(--accent-blue);
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  border-right: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
 }
 .nav-icon {
   font-size: 1.25rem;
@@ -187,8 +186,8 @@ onMounted(() => {
 }
 .kb-card {
   padding: 1rem;
-  background: rgba(6, 182, 212, 0.05);
-  border-color: rgba(6, 182, 212, 0.2);
+  background: rgba(255, 231, 111, 0.08);
+  border-color: rgba(255, 231, 111, 0.2);
 }
 .kb-header {
   display: flex;
@@ -199,7 +198,7 @@ onMounted(() => {
 .kb-title {
   font-weight: 600;
   font-size: var(--font-size-sm);
-  color: var(--text-primary);
+  color: var(--accent-yellow);
 }
 .refresh-btn {
   background: transparent;
@@ -211,8 +210,8 @@ onMounted(() => {
   transition: all var(--transition-fast);
 }
 .refresh-btn:hover {
-  color: var(--accent-cyan);
-  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-yellow);
+  background: rgba(255, 231, 111, 0.1);
 }
 .spinning {
   animation: spin 1s linear infinite;
@@ -225,22 +224,22 @@ onMounted(() => {
 }
 .stat-label {
   font-size: var(--font-size-xs);
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.5);
 }
 .stat-value {
   font-family: monospace;
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: var(--accent-cyan);
+  color: var(--accent-yellow);
 }
 .user-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--bg-input);
+  background: rgba(255,255,255,0.08);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 .user-avatar {
   font-size: 1.25rem;

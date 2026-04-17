@@ -126,9 +126,9 @@
           <p class="result-detail">系统成功在表格中填入了 <strong class="highlight">{{ result.filled_cells }}</strong> 个数据单元格！</p>
           <p class="result-time" v-if="elapsedTime">耗时 <strong>{{ elapsedTime }}</strong> 秒</p>
           <div class="download-section">
-            <a :href="downloadHref" class="btn btn-success" download>
+            <button class="btn btn-success" @click="downloadResult">
               <span class="icon">📥</span> 下载填写好的文档
-            </a>
+            </button>
           </div>
         </div>
 
@@ -211,6 +211,32 @@ const downloadHref = computed(() => {
   }
   return '#'
 })
+
+const downloadResult = () => {
+  if (!result.value?.output_path) return
+  const url = api.getDownloadUrl(result.value.output_path)
+  const token = localStorage.getItem('token')
+  const xhr = new XMLHttpRequest()
+  xhr.open('GET', url, true)
+  xhr.responseType = 'blob'
+  if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      const blob = xhr.response
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = result.value.output_path.split(/[/\\]/).pop() || 'download'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(a.href)
+    } else {
+      toast.error('下载失败')
+    }
+  }
+  xhr.onerror = () => toast.error('下载失败')
+  xhr.send()
+}
 
 const startPreview = async () => {
   if (!templateFile.value) return

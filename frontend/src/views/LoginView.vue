@@ -103,7 +103,7 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-base);
+  background: var(--bg-primary);
 }
 .login-card {
   width: 420px;
@@ -118,10 +118,7 @@ const handleRegister = async () => {
   font-size: 1.75rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-yellow);
 }
 .login-subtitle {
   text-align: center;

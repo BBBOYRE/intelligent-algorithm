@@ -114,10 +114,7 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-yellow);
 }
 .welcome-subtitle {
   color: var(--text-muted);
@@ -147,11 +144,11 @@ onMounted(async () => {
   justify-content: center;
   font-size: 1.5rem;
 }
-.icon-blue { background: rgba(59, 130, 246, 0.15); }
+.icon-blue { background: rgba(0, 46, 166, 0.2); }
 .icon-purple { background: rgba(139, 92, 246, 0.15); }
-.icon-emerald { background: rgba(16, 185, 129, 0.15); }
-.icon-amber { background: rgba(245, 158, 11, 0.15); }
-.icon-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+.icon-emerald { background: rgba(52, 211, 153, 0.15); }
+.icon-amber { background: rgba(255, 231, 111, 0.15); }
+.icon-cyan { background: rgba(0, 46, 166, 0.15); color: #5b8def; }
 .stat-info {
   display: flex;
   flex-direction: column;

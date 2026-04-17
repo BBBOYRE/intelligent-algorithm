@@ -13,8 +13,37 @@ class KnowledgeGraphBuilder:
         self.kb = kb
         self.llm = create_llm()
 
-    def build_graph(self, top_k: int = 20) -> dict:
-        all_text = self.kb.get_full_text(separator="\n\n---\n\n")
+    def build_graph(self, file_names: list[str] | None = None) -> dict:
+        all_text = ""
+
+        # 从 parsed_docs 取指定文件（或全部）的 markdown
+        for doc in self.kb.all_parsed_docs:
+            name = doc.get("file_name", "")
+            if file_names and name not in file_names:
+                continue
+            md = doc.get("markdown", "")
+            if md:
+                all_text += f"\n\n--- {name} ---\n\n" + md
+            elif doc.get("chunks"):
+                all_text += f"\n\n--- {name} ---\n\n" + "\n".join(doc["chunks"])
+
+        # fallback: 从 ChromaDB 取
+        if not all_text.strip():
+            try:
+                count = self.kb.collection.count()
+                if count > 0:
+                    kwargs = {"limit": min(count, 200), "include": ["documents", "metadatas"]}
+                    result = self.kb.collection.get(**kwargs)
+                    docs = result.get("documents", [])
+                    metas = result.get("metadatas", [])
+                    for i, text in enumerate(docs):
+                        src = metas[i].get("source", "") if i < len(metas) else ""
+                        if file_names and src not in file_names:
+                            continue
+                        all_text += "\n\n" + text
+            except Exception:
+                pass
+
         if not all_text.strip():
             return {"nodes": [], "edges": []}
         if len(all_text) > 6000:

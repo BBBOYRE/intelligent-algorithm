@@ -61,6 +61,7 @@
       <!-- Tab 切换 -->
       <div class="team-tabs">
         <button class="tab-btn" :class="{ active: teamTab === 'members' }" @click="teamTab = 'members'">成员 ({{ members.length }})</button>
+        <button class="tab-btn" :class="{ active: teamTab === 'kb' }" @click="teamTab = 'kb'; loadTeamKBs()">共享知识库</button>
         <button class="tab-btn" :class="{ active: teamTab === 'activity' }" @click="teamTab = 'activity'; loadActivity()">团队动态</button>
       </div>
 
@@ -76,6 +77,27 @@
           >邀请成员</n-button>
         </div>
         <n-data-table :columns="memberColumns" :data="members" :bordered="false" size="small" />
+      </div>
+
+      <!-- 共享知识库 -->
+      <div class="card-static members-section" v-if="teamTab === 'kb'">
+        <div class="members-header">
+          <h3>团队知识库</h3>
+          <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="small" type="primary" @click="showCreateKBModal = true">创建知识库</n-button>
+        </div>
+        <div v-if="teamKBs.length === 0" style="text-align:center;padding:2rem;color:var(--text-muted)">暂无团队知识库</div>
+        <div v-else class="activity-list">
+          <div class="kb-row" v-for="kb in teamKBs" :key="kb.id">
+            <div class="kb-row-info">
+              <span class="kb-row-name">{{ kb.name }}</span>
+              <span class="kb-row-meta">{{ kb.total_chunks }} 分块 · {{ kb.documents.length }} 文档 · {{ kb.visibility === 'all' ? '全员可见' : '受限访问' }}</span>
+            </div>
+            <div class="kb-row-actions">
+              <n-button size="tiny" @click="selectedKBDetail = kb; showKBDetailModal = true">详情</n-button>
+              <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="error" @click="deleteTeamKB(kb)">删除</n-button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 团队动态 -->
@@ -151,6 +173,43 @@
         </div>
       </template>
     </n-modal>
+
+    <!-- 创建团队知识库弹窗 -->
+    <n-modal v-model:show="showCreateKBModal" preset="card" title="创建团队知识库" style="width:420px">
+      <n-form :model="createKBForm" label-placement="left" label-width="80">
+        <n-form-item label="名称">
+          <n-input v-model:value="createKBForm.name" placeholder="如：项目文档库" />
+        </n-form-item>
+        <n-form-item label="描述">
+          <n-input v-model:value="createKBForm.description" type="textarea" :rows="2" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="可见性">
+          <n-select v-model:value="createKBForm.visibility" :options="[{label:'全员可见',value:'all'},{label:'受限访问',value:'restricted'}]" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <n-button @click="showCreateKBModal = false">取消</n-button>
+          <n-button type="primary" @click="doCreateTeamKB">创建</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 知识库详情弹窗 -->
+    <n-modal v-model:show="showKBDetailModal" preset="card" :title="selectedKBDetail?.name || '知识库详情'" style="width:560px">
+      <template v-if="selectedKBDetail">
+        <div style="margin-bottom:1rem;color:var(--text-secondary)">
+          {{ selectedKBDetail.description || '暂无描述' }} · {{ selectedKBDetail.visibility === 'all' ? '全员可见' : '受限访问' }}
+        </div>
+        <div style="margin-bottom:0.5rem;font-weight:600;color:var(--text-primary)">文档列表 ({{ selectedKBDetail.documents.length }})</div>
+        <div v-if="selectedKBDetail.documents.length">
+          <div v-for="d in selectedKBDetail.documents" :key="d.file_name" style="padding:0.3rem 0;color:var(--text-secondary);font-size:var(--font-size-sm)">
+            {{ d.file_name }} <n-tag size="tiny">{{ d.format }}</n-tag>
+          </div>
+        </div>
+        <div v-else style="color:var(--text-muted);padding:1rem 0;text-align:center">暂无文档，前往上传页面选择此知识库上传</div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -173,6 +232,11 @@ const teamTab = ref('members')
 const activities = ref([])
 const editingAnnouncement = ref(false)
 const announcementDraft = ref('')
+const teamKBs = ref([])
+const showCreateKBModal = ref(false)
+const showKBDetailModal = ref(false)
+const selectedKBDetail = ref(null)
+const createKBForm = ref({ name: '', description: '', visibility: 'all' })
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -360,6 +424,50 @@ const saveAnnouncement = async () => {
   }
 }
 
+const loadTeamKBs = async () => {
+  if (!currentTeamId.value) return
+  try {
+    const res = await api.listKBs()
+    teamKBs.value = (res.knowledge_bases || []).filter(kb => kb.team_id === currentTeamId.value)
+  } catch { teamKBs.value = [] }
+}
+
+const doCreateTeamKB = async () => {
+  if (!createKBForm.value.name.trim()) return message.warning('请输入名称')
+  try {
+    await api.createKB({
+      name: createKBForm.value.name,
+      description: createKBForm.value.description,
+      team_id: currentTeamId.value,
+      visibility: createKBForm.value.visibility,
+    })
+    message.success('团队知识库创建成功')
+    showCreateKBModal.value = false
+    createKBForm.value = { name: '', description: '', visibility: 'all' }
+    await loadTeamKBs()
+  } catch (e) {
+    message.error(e?.response?.data?.detail || '创建失败')
+  }
+}
+
+const deleteTeamKB = (kb) => {
+  dialog.warning({
+    title: '删除知识库',
+    content: `确定删除「${kb.name}」？所有文档数据将被清除。`,
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.deleteKB(kb.id)
+        message.success('已删除')
+        await loadTeamKBs()
+      } catch (e) {
+        message.error(e?.response?.data?.detail || '删除失败')
+      }
+    },
+  })
+}
+
 onMounted(loadTeams)
 </script>
 
@@ -434,4 +542,13 @@ onMounted(loadTeams)
 .activity-action { color: var(--text-primary); }
 .activity-detail { color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .activity-time { color: var(--text-muted); font-size: var(--font-size-xs); white-space: nowrap; }
+.kb-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem; background: var(--bg-input); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); margin-bottom: 0.5rem;
+}
+.kb-row-info { display: flex; flex-direction: column; gap: 0.2rem; }
+.kb-row-name { font-weight: 600; color: var(--text-primary); }
+.kb-row-meta { font-size: var(--font-size-xs); color: var(--text-muted); }
+.kb-row-actions { display: flex; gap: 0.5rem; }
 </style>

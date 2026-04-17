@@ -6,6 +6,12 @@
     </div>
 
     <div class="upload-section card-static">
+      <!-- 知识库选择器 -->
+      <div class="kb-selector-bar" v-if="kbOptions.length > 1">
+        <span style="color:var(--text-secondary);font-size:var(--font-size-sm)">上传到：</span>
+        <n-select v-model:value="selectedKBId" :options="kbOptions" style="width:280px" size="small" />
+      </div>
+
       <!-- 知识库状态栏 -->
       <div class="kb-status-bar">
         <div class="kb-info">
@@ -93,10 +99,25 @@ const uploadStatus = ref('')
 const toast = useToast()
 const store = useAppStore()
 const kbStats = ref({ total_chunks: 0, documents: [] })
+const selectedKBId = ref('default')
+const kbOptions = ref([{ label: '个人默认知识库', value: 'default' }])
+const selectedKBTeamId = ref('')
+
+const loadKBOptions = async () => {
+  try {
+    const res = await api.listKBs()
+    const opts = [{ label: '个人默认知识库', value: 'default' }]
+    for (const kb of (res.knowledge_bases || [])) {
+      const prefix = kb.team_name ? `[${kb.team_name}] ` : ''
+      opts.push({ label: prefix + kb.name, value: kb.id, teamId: kb.team_id || '' })
+    }
+    kbOptions.value = opts
+  } catch {}
+}
 
 const loadKBStats = async () => {
   try {
-    kbStats.value = await api.getKBStats()
+    kbStats.value = await api.getKBStats(selectedKBId.value)
   } catch (e) {
     kbStats.value = { total_chunks: 0, documents: [] }
   }
@@ -117,7 +138,10 @@ const handleClearKB = async () => {
   }
 }
 
-onMounted(loadKBStats)
+onMounted(() => {
+  loadKBStats()
+  loadKBOptions()
+})
 
 const triggerFileInput = () => {
   if (!isUploading.value) fileInput.value.click()
@@ -187,6 +211,9 @@ const uploadFiles = async () => {
     files.value.forEach(file => {
       formData.append('files', file)
     })
+    formData.append('kb_id', selectedKBId.value)
+    const opt = kbOptions.value.find(o => o.value === selectedKBId.value)
+    if (opt?.teamId) formData.append('team_id', opt.teamId)
 
     // 5个以上文件用异步模式
     if (files.value.length > 5) {

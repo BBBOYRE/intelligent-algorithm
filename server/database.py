@@ -29,4 +29,5 @@ def get_db():
 def init_db():
     """创建所有表（开发用，生产环境用 alembic）"""
     from server.models import user, document, knowledge_base_model, audit_log, team, api_key, webhook  # noqa: F401
+    from server.models import kb_permission  # noqa: F401
     Base.metadata.create_all(bind=engine)

@@ -34,6 +34,15 @@ export default {
   deleteKBDocument(fileName, kbId = 'default') {
     return http.delete(`/kb/documents/${encodeURIComponent(fileName)}?kb_id=${kbId}`).then(r => r.data)
   },
+  listKBPermissions(kbId) {
+    return http.get(`/kb/${kbId}/permissions`).then(r => r.data)
+  },
+  setKBPermission(kbId, data) {
+    return http.post(`/kb/${kbId}/permissions`, data).then(r => r.data)
+  },
+  removeKBPermission(kbId, userId) {
+    return http.delete(`/kb/${kbId}/permissions/${userId}`).then(r => r.data)
+  },
 
   /* ---- Document Upload ---- */
   uploadFiles(formData) {
@@ -146,8 +155,14 @@ export default {
   },
 
   /* ---- Knowledge Graph ---- */
-  getKnowledgeGraph(kbId = 'default') {
-    return http.get(`/knowledge-graph?kb_id=${kbId}`, { timeout: 180000 }).then(r => r.data)
+  getKGFiles(kbId = 'default') {
+    return http.get(`/knowledge-graph/files?kb_id=${kbId}`).then(r => r.data)
+  },
+  generateKG(fileNames = null, kbId = 'default') {
+    return http.post(`/knowledge-graph/generate?kb_id=${kbId}`, { file_names: fileNames }).then(r => r.data)
+  },
+  getKGResult(taskId) {
+    return http.get(`/knowledge-graph/result/${taskId}`).then(r => r.data)
   },
 
   /* ---- Analytics ---- */

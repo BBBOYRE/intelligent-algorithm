@@ -88,7 +88,7 @@
             <span class="success-badge">操作完成</span>
             <div class="result-actions">
               <button class="copy-btn" @click="copyResult">复制结果</button>
-              <a v-if="result.output_path" :href="downloadHref" class="download-btn" download>下载修改后文档</a>
+              <button v-if="result.output_path" class="download-btn" @click="downloadFile">下载修改后文档</button>
             </div>
           </div>
           <div class="result-meta">
@@ -170,6 +170,31 @@ const downloadHref = computed(() => {
   }
   return '#'
 })
+
+const downloadFile = () => {
+  if (!result.value?.output_path) return
+  const url = api.getDownloadUrl(result.value.output_path)
+  const token = localStorage.getItem('token')
+  const xhr = new XMLHttpRequest()
+  xhr.open('GET', url, true)
+  xhr.responseType = 'blob'
+  if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(xhr.response)
+      a.download = result.value.output_path.split(/[/\\]/).pop() || 'download'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(a.href)
+    } else {
+      toast.error('下载失败')
+    }
+  }
+  xhr.onerror = () => toast.error('下载失败')
+  xhr.send()
+}
 
 const quickActions = [
   '提取所有人名',

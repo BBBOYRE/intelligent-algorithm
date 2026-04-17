@@ -56,7 +56,7 @@ const handleUserMenu = (key) => {
   z-index: 90;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background: rgba(10, 14, 26, 0.8);
+  background: rgba(10, 15, 30, 0.85);
 }
 
 .header-content {
@@ -81,7 +81,7 @@ const handleUserMenu = (key) => {
   display: block;
   width: 4px;
   height: 16px;
-  background: var(--gradient-primary);
+  background: var(--accent-yellow);
   border-radius: 2px;
 }
 </style>

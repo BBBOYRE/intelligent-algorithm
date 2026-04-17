@@ -13,6 +13,8 @@ router = APIRouter()
 @router.post("/documents/upload")
 async def upload_documents(
     files: list[UploadFile] = File(...),
+    kb_id: str = Form("default"),
+    team_id: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
     """同步上传（少量文件直接处理）"""
@@ -22,7 +24,7 @@ async def upload_documents(
     from core.document_parser import DocumentParser
 
     parser = DocumentParser()
-    kb = get_kb(current_user.id)
+    kb = get_kb(current_user.id, kb_id, team_id=team_id if team_id else None)
     success_count = 0
     errors = []
 
@@ -53,6 +55,8 @@ async def upload_documents(
 @router.post("/documents/upload-async")
 async def upload_documents_async(
     files: list[UploadFile] = File(...),
+    kb_id: str = Form("default"),
+    team_id: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
     """异步上传（大量文件后台处理，返回 task_id 轮询进度）"""
