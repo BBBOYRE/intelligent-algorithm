@@ -84,6 +84,12 @@ export default {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data)
   },
+  compareDocuments(formData) {
+    return http.post('/doc-ops/compare', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 180000,
+    }).then(r => r.data)
+  },
 
   /* ---- Teams ---- */
   listTeams() {
@@ -112,6 +118,28 @@ export default {
   },
   transferTeamOwnership(teamId, newOwnerId) {
     return http.post(`/teams/${teamId}/transfer`, { new_owner_id: newOwnerId }).then(r => r.data)
+  },
+
+  /* ---- API Keys ---- */
+  listApiKeys() {
+    return http.get('/api-keys').then(r => r.data)
+  },
+  createApiKey(data) {
+    return http.post('/api-keys', data).then(r => r.data)
+  },
+  deleteApiKey(keyId) {
+    return http.delete(`/api-keys/${keyId}`).then(r => r.data)
+  },
+
+  /* ---- Webhooks ---- */
+  listWebhooks() {
+    return http.get('/webhooks').then(r => r.data)
+  },
+  createWebhook(data) {
+    return http.post('/webhooks', data).then(r => r.data)
+  },
+  deleteWebhook(id) {
+    return http.delete(`/webhooks/${id}`).then(r => r.data)
   },
 
   /* ---- Analytics ---- */

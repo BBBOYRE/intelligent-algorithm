@@ -28,13 +28,14 @@ class DocumentParser:
         path = Path(file_path)
         suffix = path.suffix.lower()
 
-        # [核心修改]：拦截纯文本格式，直接绕过 Docling 解析器，防止其内部报错
         if suffix in {".txt", ".md", ".csv", ".html", ".htm"}:
             markdown = self._fallback_extract_text(path)
+            chunks = self._split_text(markdown)
             return {
                 "file_name": path.name,
                 "markdown": markdown,
-                "chunks": self._split_text(markdown),
+                "chunks": chunks,
+                "word_count": self._count_words(markdown),
                 "metadata": {
                     "source": str(path),
                     "format": suffix,
@@ -54,6 +55,7 @@ class DocumentParser:
                     "file_name": path.name,
                     "markdown": markdown,
                     "chunks": chunks or self._split_text(markdown),
+                    "word_count": self._count_words(markdown),
                     "metadata": {
                         "source": str(path),
                         "format": suffix,
@@ -61,14 +63,15 @@ class DocumentParser:
                     },
                 }
             except Exception:
-                # Fallback to lightweight parser when Docling fails on edge cases.
                 pass
 
         markdown = self._fallback_extract_text(path)
+        chunks = self._split_text(markdown)
         return {
             "file_name": path.name,
             "markdown": markdown,
-            "chunks": self._split_text(markdown),
+            "chunks": chunks,
+            "word_count": self._count_words(markdown),
             "metadata": {
                 "source": str(path),
                 "format": suffix,
@@ -78,6 +81,15 @@ class DocumentParser:
 
     def parse_batch(self, file_paths: list[str | Path]) -> list[dict]:
         return [self.parse(path) for path in file_paths]
+
+    @staticmethod
+    def _count_words(text: str) -> int:
+        import re
+        if not text:
+            return 0
+        chinese = len(re.findall(r'[\u4e00-\u9fff]', text))
+        english = len(re.findall(r'[a-zA-Z]+', text))
+        return chinese + english
 
     @staticmethod
     def _split_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:

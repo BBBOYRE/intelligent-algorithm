@@ -38,6 +38,10 @@ async def upload_documents(
     if success_count == 0 and errors:
         raise HTTPException(status_code=500, detail=f"上传失败: {', '.join(errors)}")
 
+    if success_count > 0:
+        from server.services.webhook_dispatcher import dispatch_event
+        await dispatch_event(current_user.id, "document.uploaded", {"success_count": success_count, "total": len(files)})
+
     return {
         "status": "success",
         "success_count": success_count,
@@ -55,13 +59,12 @@ async def upload_documents_async(
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
 
-    # 先保存所有文件到磁盘
     file_paths = []
     for file in files:
         try:
             fp = await save_uploaded_file_fastapi(file)
             file_paths.append(fp)
-        except Exception as exc:
+        except Exception:
             pass
 
     if not file_paths:

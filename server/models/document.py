@@ -16,5 +16,6 @@ class Document(Base):
     file_size: Mapped[int] = mapped_column(BigInteger, default=0)
     format: Mapped[str] = mapped_column(String(20), default="")
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="uploaded")  # uploaded / parsing / indexed / failed
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

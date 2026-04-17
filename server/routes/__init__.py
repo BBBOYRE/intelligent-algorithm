@@ -9,6 +9,8 @@ from server.routes.tasks import router as tasks_router
 from server.routes.audit import router as audit_router
 from server.routes.analytics import router as analytics_router
 from server.routes.teams import router as teams_router
+from server.routes.api_keys import router as api_keys_router
+from server.routes.webhooks import router as webhooks_router
 
 __all__ = [
     "documents_router",
@@ -22,4 +24,6 @@ __all__ = [
     "audit_router",
     "analytics_router",
     "teams_router",
+    "api_keys_router",
+    "webhooks_router",
 ]

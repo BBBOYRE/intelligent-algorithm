@@ -2,9 +2,13 @@
   <div class="doc-ops-view animate-fade-in stagger-children">
     <div class="page-header">
       <h2 class="section-title">文档智能操作</h2>
-      <p class="section-subtitle">上传文档并输入自然语言指令，系统将自动执行信息提取、内容编辑、格式转换、文档总结等操作。</p>
+      <p class="section-subtitle">自然语言指令操作文档，或对比两个文档的差异。</p>
+      <div class="tab-bar">
+        <button class="tab-btn" :class="{ active: activeTab === 'ops' }" @click="activeTab = 'ops'">文档操作</button>
+        <button class="tab-btn" :class="{ active: activeTab === 'compare' }" @click="activeTab = 'compare'">文档对比</button>
+      </div>
     </div>
-    <div class="card-static content-layout">
+    <div class="card-static content-layout" v-if="activeTab === 'ops'">
       <div class="left-panel">
         <h3 class="panel-title">1. 选择文档</h3>
         <div
@@ -103,6 +107,41 @@
         </div>
       </div>
     </div>
+
+    <!-- 文档对比 -->
+    <div class="card-static compare-layout" v-if="activeTab === 'compare'">
+      <div class="compare-uploads">
+        <div class="compare-file-box">
+          <h4>文档 A</h4>
+          <div class="drop-zone mini-drop" @click="$refs.compareInputA.click()">
+            <span v-if="!compareFileA">点击选择文件</span>
+            <span v-else class="file-name">{{ compareFileA.name }}</span>
+          </div>
+          <input type="file" ref="compareInputA" accept=".docx,.xlsx,.md,.txt,.pdf" style="display:none" @change="compareFileA = $event.target.files[0]" />
+        </div>
+        <div class="compare-file-box">
+          <h4>文档 B</h4>
+          <div class="drop-zone mini-drop" @click="$refs.compareInputB.click()">
+            <span v-if="!compareFileB">点击选择文件</span>
+            <span v-else class="file-name">{{ compareFileB.name }}</span>
+          </div>
+          <input type="file" ref="compareInputB" accept=".docx,.xlsx,.md,.txt,.pdf" style="display:none" @change="compareFileB = $event.target.files[0]" />
+        </div>
+      </div>
+      <div class="action-box" style="margin-top:1rem">
+        <button class="btn btn-primary btn-lg w-full" @click="startCompare" :disabled="!compareFileA || !compareFileB || isComparing">
+          <span class="spinner" v-if="isComparing"></span>
+          {{ isComparing ? 'AI 正在对比分析...' : '开始对比' }}
+        </button>
+      </div>
+      <div class="compare-result" v-if="compareReport">
+        <div class="result-header" style="margin-bottom:0.75rem">
+          <span class="success-badge">对比完成</span>
+          <button class="copy-btn" @click="navigator.clipboard.writeText(compareReport); toast.success('已复制')">复制报告</button>
+        </div>
+        <div class="result-content compare-report-content" v-html="renderMarkdown(compareReport)"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -118,6 +157,12 @@ const isProcessing = ref(false)
 const result = ref(null)
 const instruction = ref('')
 const toast = useToast()
+const activeTab = ref('ops')
+
+const compareFileA = ref(null)
+const compareFileB = ref(null)
+const isComparing = ref(false)
+const compareReport = ref('')
 
 const downloadHref = computed(() => {
   if (result.value && result.value.output_path) {
@@ -203,6 +248,30 @@ const startExecute = async () => {
   } finally {
     isProcessing.value = false
   }
+}
+
+const startCompare = async () => {
+  if (!compareFileA.value || !compareFileB.value) return
+  isComparing.value = true
+  compareReport.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('file_a', compareFileA.value)
+    formData.append('file_b', compareFileB.value)
+    const res = await api.compareDocuments(formData)
+    compareReport.value = res.report || '未生成对比报告'
+    toast.success('对比完成')
+  } catch (error) {
+    toast.error('对比失败: ' + error.message)
+  } finally {
+    isComparing.value = false
+  }
+}
+
+const renderMarkdown = (text) => {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
 }
 </script>
 
@@ -448,5 +517,59 @@ const startExecute = async () => {
 .pulsing {
   animation: pulse-glow 2s infinite;
   color: var(--accent-blue);
+}
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin-top: 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 0.6rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.tab-btn:not(:last-child) {
+  border-right: 1px solid var(--border-subtle);
+}
+.tab-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+  font-weight: 600;
+}
+.compare-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.compare-uploads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.compare-file-box h4 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+.mini-drop {
+  min-height: 80px;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+.compare-report-content {
+  max-height: 500px;
+  overflow-y: auto;
+  line-height: 1.8;
 }
 </style>

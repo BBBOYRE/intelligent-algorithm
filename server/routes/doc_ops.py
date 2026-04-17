@@ -24,3 +24,22 @@ async def execute_doc_operation(
         return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/doc-ops/compare")
+async def compare_documents(
+    file_a: UploadFile = File(...),
+    file_b: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    if not file_a or not file_b:
+        raise HTTPException(status_code=400, detail="请上传两个文档")
+    try:
+        path_a = await save_uploaded_file_fastapi(file_a)
+        path_b = await save_uploaded_file_fastapi(file_b)
+        from core.doc_comparator import DocComparator
+        comparator = DocComparator()
+        result = comparator.compare(path_a, path_b)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))

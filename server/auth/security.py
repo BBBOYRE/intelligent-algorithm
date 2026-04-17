@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -48,26 +48,42 @@ def _get_or_create_default_user(db: Session) -> User:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    # 免认证模式：直接返回默认用户
     if Config.AUTH_DISABLED:
         return _get_or_create_default_user(db)
 
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证凭据")
+    # 1) JWT auth
+    if credentials is not None:
+        token = credentials.credentials
+        try:
+            payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=[Config.JWT_ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的认证凭据")
+        except JWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证凭据已过期或无效")
 
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=[Config.JWT_ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的认证凭据")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证凭据已过期或无效")
+        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已禁用")
+        return user
 
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已禁用")
-    return user
+    # 2) API Key auth via X-API-Key header
+    api_key_raw = request.headers.get("X-API-Key")
+    if api_key_raw:
+        from server.models.api_key import ApiKey
+        keys = db.query(ApiKey).filter(ApiKey.is_active == True, ApiKey.key_prefix == api_key_raw[:12]).all()
+        for k in keys:
+            if verify_password(api_key_raw, k.key_hash):
+                k.last_used_at = datetime.now(timezone.utc)
+                db.commit()
+                user = db.query(User).filter(User.id == k.user_id, User.is_active == True).first()
+                if user is None:
+                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key 对应的用户已禁用")
+                return user
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的 API Key")
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证凭据")

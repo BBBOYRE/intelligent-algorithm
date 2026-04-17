@@ -56,6 +56,8 @@ async def fill_table_endpoint(
             precision=fill_precision,
         )
         if result.get("status") == "success" and os.path.exists(result["output_path"]):
+            from server.services.webhook_dispatcher import dispatch_event
+            await dispatch_event(current_user.id, "table.filled", {"filled_cells": result.get("filled_cells", 0)})
             return result
         else:
             raise HTTPException(status_code=500, detail="填表失败或未能生成有效文件")

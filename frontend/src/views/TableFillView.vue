@@ -72,24 +72,54 @@
         <div class="action-box">
           <button
             class="btn btn-primary btn-lg w-full"
-            @click="startFill"
+            @click="startPreview"
             :disabled="!templateFile || isProcessing"
           >
-            <span class="icon" v-if="!isProcessing">✨</span>
+            <span class="icon" v-if="!isProcessing">🔍</span>
             <span class="spinner" v-else></span>
-            {{ isProcessing ? '正在处理数据，请稍候...' : '开始智能填写' }}
+            {{ isProcessing ? '正在处理数据，请稍候...' : '预览填写结果' }}
           </button>
         </div>
       </div>
       <div class="right-panel">
-        <h3 class="panel-title">执行结果</h3>
-        <div class="result-box" v-if="!result">
+        <h3 class="panel-title">{{ previewData ? '预览结果（可编辑）' : '执行结果' }}</h3>
+
+        <!-- 预览表格 -->
+        <div class="result-box preview-box" v-if="previewData" style="align-items:stretch;justify-content:flex-start;overflow:auto">
+          <div v-for="(table, ti) in previewData.tables" :key="ti" class="preview-table-wrap">
+            <table class="preview-table">
+              <thead>
+                <tr><th v-for="h in table.headers" :key="h">{{ h }}</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, ri) in table.rows" :key="ri">
+                  <td v-for="h in table.headers" :key="h">
+                    <input class="cell-input" v-model="row[h]" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="preview-actions">
+            <button class="btn btn-secondary" @click="previewData = null">返回修改</button>
+            <button class="btn btn-success" @click="confirmFill" :disabled="isProcessing">
+              <span class="icon" v-if="!isProcessing">✨</span>
+              <span class="spinner" v-else></span>
+              确认并生成文件
+            </button>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div class="result-box" v-else-if="!result">
           <div class="empty-state">
             <div class="empty-icon">⏳</div>
             <p v-if="!isProcessing">尚未开始处理</p>
             <p v-else class="pulsing">AI 代理正在努力填表中...</p>
           </div>
         </div>
+
+        <!-- 成功 -->
         <div class="result-box result-success animate-slide-in" v-else-if="result.status === 'success'">
           <div class="success-icon">✅</div>
           <h3>填写完成</h3>
@@ -101,6 +131,8 @@
             </a>
           </div>
         </div>
+
+        <!-- 失败 -->
         <div class="result-box result-error animate-slide-in" v-else>
           <div class="error-icon">❌</div>
           <h3>处理失败</h3>
@@ -126,6 +158,7 @@ const toast = useToast()
 const customRequirements = ref('')
 const fillPrecision = ref('fine')
 const elapsedTime = ref(null)
+const previewData = ref(null)
 
 const triggerFileInput = () => {
   if (!isProcessing.value) fileInput.value.click()
@@ -179,7 +212,36 @@ const downloadHref = computed(() => {
   return '#'
 })
 
-const startFill = async () => {
+const startPreview = async () => {
+  if (!templateFile.value) return
+  isProcessing.value = true
+  result.value = null
+  previewData.value = null
+  elapsedTime.value = null
+  const startTime = Date.now()
+  try {
+    const formData = new FormData()
+    formData.append('file', templateFile.value)
+    formData.append('custom_requirements', customRequirements.value || '')
+    formData.append('fill_precision', fillPrecision.value)
+
+    const res = await api.previewTemplate(formData)
+    elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
+    if (res.status === 'success' && res.tables?.length) {
+      previewData.value = res
+      toast.success(`预览完成，共 ${res.tables.length} 个表格`)
+    } else {
+      toast.error('未检测到可填写的表格')
+    }
+  } catch (error) {
+    elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
+    toast.error('预览失败: ' + error.message)
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const confirmFill = async () => {
   if (!templateFile.value) return
   isProcessing.value = true
   result.value = null
@@ -194,6 +256,7 @@ const startFill = async () => {
     const res = await api.fillTemplate(formData)
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
     result.value = res
+    previewData.value = null
     toast.success(`表格填写完成！耗时 ${elapsedTime.value}s`)
   } catch (error) {
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
@@ -412,5 +475,46 @@ const startFill = async () => {
 .pulsing {
   animation: pulse-glow 2s infinite;
   color: var(--accent-blue);
+}
+.preview-box {
+  padding: 1rem;
+}
+.preview-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.preview-table th, .preview-table td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+.preview-table th {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cell-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  padding: 0.2rem 0;
+}
+.cell-input:focus {
+  background: rgba(59, 130, 246, 0.05);
+}
+.preview-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 </style>
