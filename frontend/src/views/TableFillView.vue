@@ -212,7 +212,12 @@ const downloadHref = computed(() => {
   return '#'
 })
 
-const downloadResult = () => {
+const isDesktopRuntime = () => {
+  const ua = (navigator.userAgent || '').toLowerCase()
+  return ua.includes('pywebview') || (typeof window !== 'undefined' && !!window.pywebview)
+}
+
+const browserDownload = () => {
   if (!result.value?.output_path) return
   const url = api.getDownloadUrl(result.value.output_path)
   const token = localStorage.getItem('token')
@@ -236,6 +241,31 @@ const downloadResult = () => {
   }
   xhr.onerror = () => toast.error('下载失败')
   xhr.send()
+}
+
+const downloadResult = async () => {
+  if (!result.value?.output_path) return
+  try {
+    toast.info('尝试准备下载...')
+    const res = await api.saveFileAs(result.value.output_path)
+    if (res?.status === 'success') {
+      toast.success(`已保存到: ${res.saved_to}`)
+      return
+    }
+    if (res?.status === 'cancelled') return
+    if (res?.status === 'error') {
+      toast.error('保存失败: ' + res.error)
+      return
+    }
+  } catch (err) {
+    if (err.response && err.response.status >= 400) {
+      // 后端不支持，或者是 web 模式，降级到浏览器下载
+      browserDownload()
+    } else {
+      toast.error('请求保存接口失败')
+      browserDownload()
+    }
+  }
 }
 
 const startPreview = async () => {

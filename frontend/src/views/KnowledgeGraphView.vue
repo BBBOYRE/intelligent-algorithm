@@ -47,11 +47,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useMessage } from 'naive-ui'
 import api from '../api/index.js'
 
 const message = useMessage()
+const KG_CACHE_KEY = 'kg_graph_data_v1'
+const KG_FILES_KEY = 'kg_selected_files_v1'
 const graphContainer = ref(null)
 const loading = ref(false)
 const graphData = ref(null)
@@ -71,6 +73,31 @@ const loadFiles = async () => {
     const files = await api.getKGFiles()
     fileOptions.value = files.map(f => ({ label: f.name, value: f.name }))
   } catch {}
+}
+
+const loadCachedGraphState = async () => {
+  try {
+    const selectedRaw = localStorage.getItem(KG_FILES_KEY)
+    if (selectedRaw) {
+      const parsed = JSON.parse(selectedRaw)
+      if (Array.isArray(parsed)) selectedFiles.value = parsed
+    }
+  } catch {
+    // ignore invalid cache
+  }
+
+  try {
+    const graphRaw = localStorage.getItem(KG_CACHE_KEY)
+    if (!graphRaw) return
+    const parsed = JSON.parse(graphRaw)
+    if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+      graphData.value = parsed
+      await nextTick()
+      setTimeout(() => renderGraph(parsed), 100)
+    }
+  } catch {
+    // ignore invalid cache
+  }
 }
 
 const startGenerate = async () => {
@@ -147,11 +174,34 @@ const renderGraph = async (data) => {
   })
 }
 
-onMounted(loadFiles)
+onMounted(async () => {
+  await loadFiles()
+  await loadCachedGraphState()
+})
 onUnmounted(() => {
   if (network) network.destroy()
   if (pollTimer) clearInterval(pollTimer)
 })
+
+watch(
+  graphData,
+  (val) => {
+    if (val) {
+      localStorage.setItem(KG_CACHE_KEY, JSON.stringify(val))
+    } else {
+      localStorage.removeItem(KG_CACHE_KEY)
+    }
+  },
+  { deep: true }
+)
+
+watch(
+  selectedFiles,
+  (val) => {
+    localStorage.setItem(KG_FILES_KEY, JSON.stringify(val))
+  },
+  { deep: true }
+)
 
 const downloadGraph = () => {
   if (!graphData.value) return

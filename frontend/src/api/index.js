@@ -65,8 +65,20 @@ export default {
   },
 
   /* ---- Chat ---- */
-  chat(message, history = []) {
-    return http.post('/chat', { message, history }).then(r => r.data)
+  chat(message, history = [], extraOptions = {}) {
+    return http.post('/chat', { message, history, ...extraOptions }).then(r => r.data)
+  },
+  getChatSessions() {
+    return http.get('/chat/sessions').then(r => r.data)
+  },
+  createChatSession() {
+    return http.post('/chat/sessions').then(r => r.data)
+  },
+  updateChatSession(sessionId, title) {
+    return http.patch(`/chat/sessions/${sessionId}`, { title }).then(r => r.data)
+  },
+  deleteChatSession(sessionId) {
+    return http.delete(`/chat/sessions/${sessionId}`).then(r => r.data)
   },
 
   /* ---- Table Fill ---- */
@@ -84,7 +96,11 @@ export default {
   },
 
   getDownloadUrl(filePath) {
-    return `/api/files/download?path=${encodeURIComponent(filePath)}`
+    const base = `${window.location.protocol}//${window.location.host}`
+    return `${base}/api/files/download?path=${encodeURIComponent(filePath)}`
+  },
+  saveFileAs(filePath) {
+    return http.post(`/files/save-as?path=${encodeURIComponent(filePath)}`).then(r => r.data)
   },
 
   /* ---- Document Operations ---- */

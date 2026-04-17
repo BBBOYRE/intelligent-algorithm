@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 
@@ -31,3 +33,54 @@ async def download_file(path: str, format: str = Query(None)):
         filename=filename,
         media_type="application/octet-stream"
     )
+
+
+@router.post("/files/save-as")
+def save_file_as(path: str = Query(...)):
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        import webview
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Desktop bridge unavailable: {e}")
+
+    windows = webview.windows
+    if not windows:
+        raise HTTPException(status_code=400, detail="No desktop window available")
+
+    src = Path(path)
+    
+    try:
+        dialog_type = webview.FileDialog.SAVE
+    except AttributeError:
+        dialog_type = getattr(webview, "SAVE_DIALOG", 10)
+        
+    try:
+        # 调试信息打印
+        print(f"Trying to open save dialog for src {src.name} ...")
+        save_path = windows[0].create_file_dialog(
+            dialog_type,
+            save_filename=src.name,
+        )
+        print(f"Dialog result: {save_path}")
+    except Exception as e:
+        print("Create file dialog error:", e)
+        return {"status": "error", "error": str(e)}
+
+    if not save_path:
+        return {"status": "cancelled"}
+
+    if isinstance(save_path, (list, tuple)):
+        target = Path(save_path[0])
+    else:
+        target = Path(str(save_path))
+
+    # Append original file extension if user forgot
+    if not target.suffix and src.suffix:
+        target = target.with_suffix(src.suffix)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    import shutil
+    shutil.copyfile(src, target)
+    return {"status": "success", "saved_to": str(target)}

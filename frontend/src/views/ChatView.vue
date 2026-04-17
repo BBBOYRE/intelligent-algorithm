@@ -1,83 +1,119 @@
 <template>
   <div class="chat-view animate-fade-in stagger-children">
-    <div class="page-header">
-      <h2 class="section-title">智能问答</h2>
-      <p class="section-subtitle">基于您的知识库，使用大语言模型进行精准的内容查询与分析。</p>
-    </div>
+    <div class="chat-page">
+      <aside class="chat-sidebar card-static">
+        <div class="sidebar-header">
+          <h3>会话</h3>
+          <button class="btn btn-primary" @click="newSession">新建</button>
+        </div>
+        <div class="session-list">
+          <button
+            v-for="s in chatStore.sessions"
+            :key="s.id"
+            class="session-item"
+            :class="{ active: s.id === chatStore.activeSessionId }"
+            @click="chatStore.setActiveSession(s.id)"
+          >
+            <div class="session-title">{{ s.title || '新对话' }}</div>
+            <div class="session-meta">
+              <span>{{ formatTime(s.updated_at) }}</span>
+              <span v-if="chatStore.isSessionWaiting(s.id)">处理中</span>
+            </div>
+            <span
+              class="session-delete"
+              @click.stop="deleteSession(s.id)"
+              v-if="chatStore.sessions.length > 1"
+            >x</span>
+          </button>
+        </div>
+      </aside>
 
-    <div class="chat-container card-static">
-      <div class="chat-messages" ref="messagesContainer">
-        <div v-if="messages.length === 0" class="empty-state">
-          <div class="empty-icon">💬</div>
-          <h3>开始对话</h3>
-          <p>尝试提问关于您已上传的文档内容。例如："这篇文档总结了什么？" 或 "核心数据指标是多少？"</p>
-          <div class="suggested-questions">
-            <button class="badge badge-cyan" @click="suggestQuestion('请总结一下近期上传的文档核心内容')">
-              请总结核心内容
-            </button>
-            <button class="badge badge-blue" @click="suggestQuestion('提取所有的关键数据指标')">
-              提取关键指标
-            </button>
-            <button class="badge badge-purple" @click="suggestQuestion('最新的业务进展如何？')">
-              业务进展查询
+      <div class="chat-main">
+        <div class="page-header">
+          <h2 class="section-title">智能问答</h2>
+          <p class="section-subtitle">支持多会话与历史管理，切换页面时任务继续执行</p>
+        </div>
+
+        <div class="chat-container card-static">
+          <div class="chat-messages" ref="messagesContainer">
+            <div v-if="messages.length === 0" class="empty-state">
+              <div class="empty-icon">?</div>
+              <h3>开始对话</h3>
+              <p>示例：请总结近期上传文档核心结论；提取关键数据指标。</p>
+              <div class="suggested-questions">
+                <button class="badge badge-cyan" @click="suggestQuestion('请总结近期上传文档核心结论')">
+                  总结核心结论
+                </button>
+                <button class="badge badge-blue" @click="suggestQuestion('提取关键数据指标')">
+                  提取关键指标
+                </button>
+                <button class="badge badge-purple" @click="suggestQuestion('最新业务进展如何？')">
+                  业务进展查询
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-for="msg in messages"
+              :key="msg.id"
+              class="message-wrapper"
+              :class="msg.role === 'user' ? 'message-user' : 'message-assistant'"
+            >
+              <div class="avatar">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
+              <div class="message-content">
+                <div class="message-meta">{{ msg.role === 'user' ? '用户' : '智能助手' }}</div>
+                <div class="message-text" v-html="formatMessage(msg.content)"></div>
+              </div>
+            </div>
+
+            <div v-if="isTyping" class="message-wrapper message-assistant">
+              <div class="avatar">AI</div>
+              <div class="message-content typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <textarea
+              class="input chat-textarea"
+              v-model="inputQuery"
+              placeholder="请输入您的问题... (Shift+Enter 换行, Enter 发送)"
+              @keydown.enter="handleEnter"
+              rows="1"
+            ></textarea>
+            <button class="btn btn-primary send-btn" @click="sendMessage" :disabled="!inputQuery.trim()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
           </div>
         </div>
-
-        <div 
-          v-for="(msg, index) in messages" 
-          :key="index"
-          class="message-wrapper"
-          :class="msg.role === 'user' ? 'message-user' : 'message-assistant'"
-        >
-          <div class="avatar">{{ msg.role === 'user' ? '🧑' : '🤖' }}</div>
-          <div class="message-content">
-            <div class="message-meta">{{ msg.role === 'user' ? '用户' : '智能助手' }}</div>
-            <div class="message-text" v-html="formatMessage(msg.content)"></div>
-          </div>
-        </div>
-
-        <div v-if="isTyping" class="message-wrapper message-assistant">
-          <div class="avatar">🤖</div>
-          <div class="message-content typing-indicator">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="chat-input-area">
-        <textarea 
-          class="input chat-textarea" 
-          v-model="inputQuery" 
-          placeholder="请输入您的问题... (Shift+Enter 换行, Enter 发送)"
-          @keydown.enter="handleEnter"
-          :disabled="isTyping"
-          rows="1"
-        ></textarea>
-        <button class="btn btn-primary send-btn" @click="sendMessage" :disabled="!inputQuery.trim() || isTyping">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
-import { useToast } from '../composables/useToast'
-import api from '../api/index.js'
+import { computed, ref, nextTick, onMounted, watch } from 'vue'
+import { useChatStore } from '../stores/chat'
 
-const messages = ref([])
 const inputQuery = ref('')
-const isTyping = ref(false)
 const messagesContainer = ref(null)
-const toast = useToast()
+const chatStore = useChatStore()
+
+const messages = computed(() => chatStore.activeSession?.messages || [])
+const isTyping = computed(() => chatStore.isSessionWaiting(chatStore.activeSessionId))
 
 const formatMessage = (text) => {
-  // basic markdown to html mapping for newlines
   if (!text) return ''
-  return text
-    .replace(/\n/g, '<br/>')
+  return text.replace(/\n/g, '<br/>')
+}
+
+const formatTime = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const hh = `${d.getHours()}`.padStart(2, '0')
+  const mm = `${d.getMinutes()}`.padStart(2, '0')
+  return `${hh}:${mm}`
 }
 
 const scrollToBottom = async () => {
@@ -89,7 +125,6 @@ const scrollToBottom = async () => {
 
 const suggestQuestion = (q) => {
   inputQuery.value = q
-  // optional: auto send -> sendMessage()
 }
 
 const handleEnter = (e) => {
@@ -101,40 +136,111 @@ const handleEnter = (e) => {
 
 const sendMessage = async () => {
   const text = inputQuery.value.trim()
-  if (!text || isTyping.value) return
-
+  if (!text) return
   inputQuery.value = ''
-  
-  // Add user message
-  messages.value.push({ role: 'user', content: text })
+  await chatStore.sendMessage(text)
   scrollToBottom()
-  
-  isTyping.value = true
-
-  try {
-    // Send history (exclude last newly added user message to avoid duplicate inside API logic, if needed)
-    // Actually the logic typically requires the full history minus the current one, or just the current.
-    // Our agent.py takes `message` and `chat_history`.
-    const historyPayload = messages.value.slice(0, -1) 
-    
-    const res = await api.chat(text, historyPayload)
-    
-    messages.value.push({ role: 'assistant', content: res.reply || res.answer || res || "I don't have an answer." })
-  } catch (err) {
-    toast.error('请求失败: ' + err.message)
-    messages.value.push({ role: 'assistant', content: `[请求出错] ${err.message}` })
-  } finally {
-    isTyping.value = false
-    scrollToBottom()
-  }
 }
+
+const newSession = () => {
+  chatStore.createSession()
+}
+
+const deleteSession = (id) => {
+  chatStore.deleteSession(id)
+}
+
+onMounted(() => {
+  chatStore.init()
+  scrollToBottom()
+})
+
+watch(
+  messages,
+  async () => {
+    await nextTick()
+    scrollToBottom()
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
 .chat-view {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   height: calc(100vh - 120px);
+}
+
+.chat-page {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+}
+
+.chat-sidebar {
+  padding: 0.8rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.session-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.session-item {
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  position: relative;
+  cursor: pointer;
+}
+
+.session-item.active {
+  border-color: var(--accent-blue);
+  box-shadow: inset 0 0 0 1px var(--accent-blue);
+}
+
+.session-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.session-delete {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.chat-main {
   display: flex;
   flex-direction: column;
 }
@@ -225,7 +331,8 @@ const sendMessage = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
@@ -254,6 +361,7 @@ const sendMessage = async () => {
   color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
+
 .message-user .message-meta {
   text-align: right;
 }
@@ -263,7 +371,6 @@ const sendMessage = async () => {
   line-height: 1.6;
 }
 
-/* Typing indicator */
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -310,5 +417,15 @@ const sendMessage = async () => {
   padding: 0;
   border-radius: var(--radius-md);
   flex-shrink: 0;
+}
+
+@media (max-width: 960px) {
+  .chat-page {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-sidebar {
+    max-height: 180px;
+  }
 }
 </style>

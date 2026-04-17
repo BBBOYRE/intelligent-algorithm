@@ -14,7 +14,7 @@ import webview
 from server.app import app
 
 def run_server(port: int):
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="error")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
 
 def main():
     parser = argparse.ArgumentParser(description="文档智能系统")

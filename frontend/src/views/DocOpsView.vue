@@ -171,8 +171,25 @@ const downloadHref = computed(() => {
   return '#'
 })
 
-const downloadFile = () => {
+const isDesktopRuntime = () => {
+  const ua = (navigator.userAgent || '').toLowerCase()
+  return ua.includes('pywebview') || (typeof window !== 'undefined' && !!window.pywebview)
+}
+
+const downloadFile = async () => {
   if (!result.value?.output_path) return
+  if (isDesktopRuntime()) {
+    try {
+      const res = await api.saveFileAs(result.value.output_path)
+      if (res?.status === 'success') {
+        toast.success(`已保存到: ${res.saved_to}`)
+        return
+      }
+      if (res?.status === 'cancelled') return
+    } catch {
+      // fallback to browser-style download
+    }
+  }
   const url = api.getDownloadUrl(result.value.output_path)
   const token = localStorage.getItem('token')
   const xhr = new XMLHttpRequest()
