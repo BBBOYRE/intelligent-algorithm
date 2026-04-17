@@ -43,10 +43,31 @@
         </div>
       </div>
 
-      <!-- 成员列表 -->
-      <div class="card-static members-section">
+      <!-- 公告 -->
+      <div class="card-static announcement-section" v-if="currentTeam.announcement || myRole === 'owner' || myRole === 'admin'">
         <div class="members-header">
-          <h3>成员列表 ({{ members.length }})</h3>
+          <h3>团队公告</h3>
+          <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" @click="editingAnnouncement = !editingAnnouncement">
+            {{ editingAnnouncement ? '取消' : '编辑' }}
+          </n-button>
+        </div>
+        <div v-if="!editingAnnouncement" class="announcement-text">{{ currentTeam.announcement || '暂无公告' }}</div>
+        <div v-else style="display:flex;gap:0.5rem;flex-direction:column">
+          <n-input v-model:value="announcementDraft" type="textarea" :rows="3" placeholder="输入团队公告..." />
+          <n-button type="primary" size="small" @click="saveAnnouncement" style="align-self:flex-end">保存</n-button>
+        </div>
+      </div>
+
+      <!-- Tab 切换 -->
+      <div class="team-tabs">
+        <button class="tab-btn" :class="{ active: teamTab === 'members' }" @click="teamTab = 'members'">成员 ({{ members.length }})</button>
+        <button class="tab-btn" :class="{ active: teamTab === 'activity' }" @click="teamTab = 'activity'; loadActivity()">团队动态</button>
+      </div>
+
+      <!-- 成员列表 -->
+      <div class="card-static members-section" v-if="teamTab === 'members'">
+        <div class="members-header">
+          <h3>成员列表</h3>
           <n-button
             v-if="myRole === 'owner' || myRole === 'admin'"
             size="small"
@@ -55,6 +76,20 @@
           >邀请成员</n-button>
         </div>
         <n-data-table :columns="memberColumns" :data="members" :bordered="false" size="small" />
+      </div>
+
+      <!-- 团队动态 -->
+      <div class="card-static members-section" v-if="teamTab === 'activity'">
+        <div class="members-header"><h3>最近动态</h3></div>
+        <div v-if="activities.length === 0" style="text-align:center;padding:2rem;color:var(--text-muted)">暂无动态</div>
+        <div v-else class="activity-list">
+          <div class="activity-item" v-for="a in activities" :key="a.id">
+            <span class="activity-user">{{ a.username }}</span>
+            <span class="activity-action">{{ a.action }}</span>
+            <span class="activity-detail" v-if="a.details">{{ a.details }}</span>
+            <span class="activity-time">{{ a.created_at?.replace('T',' ').slice(0,16) }}</span>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -134,6 +169,10 @@ const members = ref([])
 const myRole = ref('member')
 const loading = ref(true)
 const loadError = ref('')
+const teamTab = ref('members')
+const activities = ref([])
+const editingAnnouncement = ref(false)
+const announcementDraft = ref('')
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -233,6 +272,7 @@ const doCreate = async () => {
 
 const openEditModal = () => {
   editForm.value = { name: currentTeam.value.name, description: currentTeam.value.description }
+  announcementDraft.value = currentTeam.value.announcement || ''
   showEditModal.value = true
 }
 
@@ -302,6 +342,24 @@ const confirmDisband = () => {
   })
 }
 
+const loadActivity = async () => {
+  if (!currentTeamId.value) return
+  try {
+    activities.value = await api.getTeamActivity(currentTeamId.value)
+  } catch { activities.value = [] }
+}
+
+const saveAnnouncement = async () => {
+  try {
+    await api.updateTeam(currentTeamId.value, { announcement: announcementDraft.value })
+    message.success('公告已更新')
+    editingAnnouncement.value = false
+    await loadTeamDetail(currentTeamId.value)
+  } catch (e) {
+    message.error(e?.response?.data?.detail || '保存失败')
+  }
+}
+
 onMounted(loadTeams)
 </script>
 
@@ -340,4 +398,40 @@ onMounted(loadTeams)
   color: var(--text-muted);
 }
 .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+.team-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 0.6rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.tab-btn:not(:last-child) { border-right: 1px solid var(--border-subtle); }
+.tab-btn.active { background: var(--accent-blue); color: #fff; font-weight: 600; }
+.announcement-section { padding: 1.25rem 1.5rem; }
+.announcement-text { color: var(--text-secondary); font-size: var(--font-size-md); line-height: 1.6; }
+.activity-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: var(--font-size-sm);
+}
+.activity-user { font-weight: 600; color: var(--accent-blue); min-width: 60px; }
+.activity-action { color: var(--text-primary); }
+.activity-detail { color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity-time { color: var(--text-muted); font-size: var(--font-size-xs); white-space: nowrap; }
 </style>

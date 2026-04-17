@@ -24,9 +24,15 @@ class DocumentParser:
             self._docling_converter = None
             self._docling_chunker = None
 
+    IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
+
     def parse(self, file_path: str | Path) -> dict:
         path = Path(file_path)
         suffix = path.suffix.lower()
+
+        # 图片文件：直接 OCR
+        if suffix in self.IMAGE_SUFFIXES:
+            return self._parse_with_ocr_image(path, suffix)
 
         if suffix in {".txt", ".md", ".csv", ".html", ".htm"}:
             markdown = self._fallback_extract_text(path)
@@ -51,6 +57,11 @@ class DocumentParser:
                 if self._docling_chunker is not None:
                     chunks = [chunk.text for chunk in self._docling_chunker.chunk(doc)]
                 markdown = doc.export_to_markdown()
+
+                # PDF 扫描件检测：Docling 提取文字极少时 fallback 到 OCR
+                if suffix == ".pdf" and len(markdown.strip()) < 50:
+                    return self._parse_with_ocr_pdf(path, suffix)
+
                 return {
                     "file_name": path.name,
                     "markdown": markdown,
@@ -63,7 +74,8 @@ class DocumentParser:
                     },
                 }
             except Exception:
-                pass
+                if suffix == ".pdf":
+                    return self._parse_with_ocr_pdf(path, suffix)
 
         markdown = self._fallback_extract_text(path)
         chunks = self._split_text(markdown)
@@ -77,6 +89,28 @@ class DocumentParser:
                 "format": suffix,
                 "parser": "fallback",
             },
+        }
+
+    def _parse_with_ocr_image(self, path: Path, suffix: str) -> dict:
+        from core.ocr_engine import ocr_image
+        markdown = ocr_image(path)
+        return {
+            "file_name": path.name,
+            "markdown": markdown,
+            "chunks": self._split_text(markdown),
+            "word_count": self._count_words(markdown),
+            "metadata": {"source": str(path), "format": suffix, "parser": "ocr"},
+        }
+
+    def _parse_with_ocr_pdf(self, path: Path, suffix: str) -> dict:
+        from core.ocr_engine import ocr_pdf
+        markdown = ocr_pdf(path)
+        return {
+            "file_name": path.name,
+            "markdown": markdown,
+            "chunks": self._split_text(markdown),
+            "word_count": self._count_words(markdown),
+            "metadata": {"source": str(path), "format": suffix, "parser": "ocr"},
         }
 
     def parse_batch(self, file_paths: list[str | Path]) -> list[dict]:

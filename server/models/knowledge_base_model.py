@@ -13,4 +13,5 @@ class KnowledgeBaseModel(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     collection_name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
+    team_id: Mapped[str] = mapped_column(String(36), ForeignKey("teams.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -68,6 +68,12 @@ const routes = [
         meta: { title: '数据分析', icon: '📈' },
       },
       {
+        path: 'knowledge-graph',
+        name: 'knowledgeGraph2',
+        component: () => import('../views/KnowledgeGraphView.vue'),
+        meta: { title: '知识图谱', icon: '🕸️' },
+      },
+      {
         path: 'team',
         name: 'team',
         component: () => import('../views/TeamView.vue'),

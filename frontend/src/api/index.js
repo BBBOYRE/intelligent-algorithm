@@ -119,6 +119,9 @@ export default {
   transferTeamOwnership(teamId, newOwnerId) {
     return http.post(`/teams/${teamId}/transfer`, { new_owner_id: newOwnerId }).then(r => r.data)
   },
+  getTeamActivity(teamId, limit = 30) {
+    return http.get(`/teams/${teamId}/activity?limit=${limit}`).then(r => r.data)
+  },
 
   /* ---- API Keys ---- */
   listApiKeys() {
@@ -140,6 +143,11 @@ export default {
   },
   deleteWebhook(id) {
     return http.delete(`/webhooks/${id}`).then(r => r.data)
+  },
+
+  /* ---- Knowledge Graph ---- */
+  getKnowledgeGraph(kbId = 'default') {
+    return http.get(`/knowledge-graph?kb_id=${kbId}`, { timeout: 180000 }).then(r => r.data)
   },
 
   /* ---- Analytics ---- */

@@ -22,6 +22,7 @@ class TeamCreate(BaseModel):
 class TeamUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    announcement: Optional[str] = None
 
 
 class InviteMember(BaseModel):
@@ -43,6 +44,7 @@ def _team_detail(team: Team, db: Session) -> dict:
         "id": team.id,
         "name": team.name,
         "description": team.description,
+        "announcement": team.announcement or "",
         "owner_id": team.owner_id,
         "created_at": team.created_at.isoformat(),
         "member_count": len(members),
@@ -123,6 +125,8 @@ async def update_team(
         team.name = data.name
     if data.description is not None:
         team.description = data.description
+    if data.announcement is not None:
+        team.announcement = data.announcement
     db.commit()
     db.refresh(team)
     return _team_detail(team, db)

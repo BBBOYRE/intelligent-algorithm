@@ -2,7 +2,7 @@
   <div class="upload-view animate-fade-in stagger-children">
     <div class="page-header">
       <h2 class="section-title">文档上传与解析</h2>
-      <p class="section-subtitle">支持 docx, xlsx, md, txt 格式，系统将自动进行解析、分块，并存入 ChromaDB 知识库。</p>
+      <p class="section-subtitle">支持 docx, xlsx, md, txt, csv, html, pdf, 图片(jpg/png/bmp/tiff) 格式，系统将自动进行解析、分块，并存入知识库。</p>
     </div>
 
     <div class="upload-section card-static">
@@ -36,7 +36,7 @@
           type="file" 
           ref="fileInput" 
           multiple 
-          accept=".docx,.xlsx,.md,.txt" 
+          accept=".docx,.xlsx,.md,.txt,.csv,.html,.pdf,.jpg,.jpeg,.png,.bmp,.tiff" 
           style="display: none" 
           @change="onFileSelected" 
         />
