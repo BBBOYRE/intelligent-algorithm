@@ -5,27 +5,51 @@
         <span class="route-title">{{ currentRouteTitle }}</span>
       </div>
       <div class="header-actions">
-        <!-- Add any global header actions here if needed -->
+        <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
+          <n-button quaternary>
+            <template #icon>
+              <n-icon><person-circle-outline /></n-icon>
+            </template>
+            {{ authStore.user?.username || '用户' }}
+          </n-button>
+        </n-dropdown>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { NIcon } from 'naive-ui'
+import { PersonCircleOutline, SettingsOutline, LogOutOutline } from '@vicons/ionicons5'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
-const currentRouteTitle = computed(() => {
-  return route.meta.title || '系统概览'
-})
+const currentRouteTitle = computed(() => route.meta.title || '系统概览')
+
+const renderIcon = (icon) => () => h(NIcon, null, { default: () => h(icon) })
+
+const userMenuOptions = [
+  { label: '个人信息', key: 'profile', icon: renderIcon(SettingsOutline) },
+  { type: 'divider' },
+  { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
+]
+
+const handleUserMenu = (key) => {
+  if (key === 'logout') {
+    authStore.logout()
+    router.push('/login')
+  }
+}
 </script>
 
 <style scoped>
 .header {
   height: var(--header-height);
-  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;

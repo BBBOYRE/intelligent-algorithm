@@ -4,13 +4,11 @@
       <h2 class="section-title">模板表格自动填写</h2>
       <p class="section-subtitle">上传空白的 docx 或 xlsx 模板表格，系统将基于知识库内容自动推断并填入数据。</p>
     </div>
-
     <div class="card-static content-layout">
       <div class="left-panel">
         <h3 class="panel-title">1. 选择模板文件</h3>
-        
-        <div 
-          class="drop-zone" 
+        <div
+          class="drop-zone"
           :class="{ 'dragover': isDragging, 'has-file': templateFile }"
           @dragover.prevent="onDragOver"
           @dragleave="onDragLeave"
@@ -30,20 +28,51 @@
             </div>
             <button class="change-btn" @click.stop="triggerFileInput">更换</button>
           </div>
-          
-          <input 
-            type="file" 
-            ref="fileInput" 
-            accept=".docx,.xlsx" 
-            style="display: none" 
-            @change="onFileSelected" 
+          <input
+            type="file"
+            ref="fileInput"
+            accept=".docx,.xlsx"
+            style="display: none"
+            @change="onFileSelected"
           />
         </div>
 
+        <div class="precision-section">
+          <h3 class="panel-title">2. 填写精度</h3>
+          <div class="toggle-group">
+            <button
+              class="toggle-btn"
+              :class="{ active: fillPrecision === 'fine' }"
+              @click="fillPrecision = 'fine'"
+              :disabled="isProcessing"
+            >
+              精细
+            </button>
+            <button
+              class="toggle-btn"
+              :class="{ active: fillPrecision === 'coarse' }"
+              @click="fillPrecision = 'coarse'"
+              :disabled="isProcessing"
+            >
+              粗略
+            </button>
+          </div>
+        </div>
+
+        <div class="custom-requirements-section">
+          <h3 class="panel-title">3. 特殊需求 (选填)</h3>
+          <textarea
+            v-model="customRequirements"
+            class="requirement-input"
+            placeholder="请输入对本次填表的特殊要求，如：保留原模板样式、某列需留空等..."
+            rows="4"
+            :disabled="isProcessing"
+          ></textarea>
+        </div>
         <div class="action-box">
-          <button 
-            class="btn btn-primary btn-lg w-full" 
-            @click="startFill" 
+          <button
+            class="btn btn-primary btn-lg w-full"
+            @click="startFill"
             :disabled="!templateFile || isProcessing"
           >
             <span class="icon" v-if="!isProcessing">✨</span>
@@ -52,10 +81,8 @@
           </button>
         </div>
       </div>
-
       <div class="right-panel">
-        <h3 class="panel-title">2. 执行结果</h3>
-        
+        <h3 class="panel-title">执行结果</h3>
         <div class="result-box" v-if="!result">
           <div class="empty-state">
             <div class="empty-icon">⏳</div>
@@ -63,23 +90,22 @@
             <p v-else class="pulsing">AI 代理正在努力填表中...</p>
           </div>
         </div>
-
         <div class="result-box result-success animate-slide-in" v-else-if="result.status === 'success'">
           <div class="success-icon">✅</div>
           <h3>填写完成</h3>
           <p class="result-detail">系统成功在表格中填入了 <strong class="highlight">{{ result.filled_cells }}</strong> 个数据单元格！</p>
-          
+          <p class="result-time" v-if="elapsedTime">耗时 <strong>{{ elapsedTime }}</strong> 秒</p>
           <div class="download-section">
             <a :href="downloadHref" class="btn btn-success" download>
               <span class="icon">📥</span> 下载填写好的文档
             </a>
           </div>
         </div>
-
         <div class="result-box result-error animate-slide-in" v-else>
           <div class="error-icon">❌</div>
           <h3>处理失败</h3>
           <p class="result-detail">{{ result.error || '发生了未知错误' }}</p>
+          <p class="result-time" v-if="elapsedTime">耗时 <strong>{{ elapsedTime }}</strong> 秒</p>
         </div>
       </div>
     </div>
@@ -97,6 +123,9 @@ const isDragging = ref(false)
 const isProcessing = ref(false)
 const result = ref(null)
 const toast = useToast()
+const customRequirements = ref('')
+const fillPrecision = ref('fine')
+const elapsedTime = ref(null)
 
 const triggerFileInput = () => {
   if (!isProcessing.value) fileInput.value.click()
@@ -131,7 +160,8 @@ const handleSelection = (file) => {
     return
   }
   templateFile.value = file
-  result.value = null // reset result when new file is picked
+  result.value = null
+  elapsedTime.value = null
 }
 
 const formatSize = (bytes) => {
@@ -153,16 +183,20 @@ const startFill = async () => {
   if (!templateFile.value) return
   isProcessing.value = true
   result.value = null
-  
+  elapsedTime.value = null
+  const startTime = Date.now()
   try {
     const formData = new FormData()
     formData.append('file', templateFile.value)
-    
-    // Server will return JSON { status, filled_cells, output_path }
+    formData.append('custom_requirements', customRequirements.value || '')
+    formData.append('fill_precision', fillPrecision.value)
+
     const res = await api.fillTemplate(formData)
+    elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
     result.value = res
-    toast.success('表格填写完成！')
+    toast.success(`表格填写完成！耗时 ${elapsedTime.value}s`)
   } catch (error) {
+    elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
     toast.error('执行失败: ' + error.message)
     result.value = { status: 'error', error: error.message }
   } finally {
@@ -176,24 +210,20 @@ const startFill = async () => {
   max-width: 1000px;
   margin: 0 auto;
 }
-
 .page-header {
   margin-bottom: 2rem;
 }
-
 .content-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   min-height: 480px;
 }
-
 .left-panel, .right-panel {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
-
 .panel-title {
   font-size: var(--font-size-lg);
   font-weight: 600;
@@ -201,11 +231,9 @@ const startFill = async () => {
   border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 0.75rem;
 }
-
 .w-full {
   width: 100%;
 }
-
 .drop-zone {
   flex: 1;
   display: flex;
@@ -213,23 +241,19 @@ const startFill = async () => {
   justify-content: center;
   min-height: 200px;
 }
-
 .drop-zone.has-file {
   border-style: solid;
   background: var(--bg-input);
 }
-
 .selected-file {
   display: flex;
   align-items: center;
   gap: 1.5rem;
   width: 100%;
 }
-
 .file-icon {
   font-size: 2.5rem;
 }
-
 .file-info {
   flex: 1;
   display: flex;
@@ -237,18 +261,15 @@ const startFill = async () => {
   gap: 0.25rem;
   text-align: left;
 }
-
 .file-name {
   font-weight: 600;
   color: var(--text-primary);
   word-break: break-all;
 }
-
 .file-size {
   font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
-
 .change-btn {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-subtle);
@@ -261,11 +282,75 @@ const startFill = async () => {
 .change-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
-
+.precision-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.toggle-group {
+  display: flex;
+  gap: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+.toggle-btn {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-md, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  outline: none;
+}
+.toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border-subtle);
+}
+.toggle-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.toggle-btn.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+  font-weight: 600;
+}
+.toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.custom-requirements-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.requirement-input {
+  width: 100%;
+  resize: vertical;
+  padding: 0.75rem 1rem;
+  font-size: var(--font-size-md, 14px);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  outline: none;
+  transition: border-color var(--transition-fast, 0.2s);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.requirement-input:focus {
+  border-color: var(--accent-blue);
+}
+.requirement-input::placeholder {
+  color: var(--text-muted);
+}
 .action-box {
   margin-top: auto;
 }
-
 .result-box {
   flex: 1;
   background: var(--bg-input);
@@ -279,7 +364,6 @@ const startFill = async () => {
   padding: 2rem;
   gap: 1rem;
 }
-
 .empty-state {
   color: var(--text-muted);
   display: flex;
@@ -287,44 +371,44 @@ const startFill = async () => {
   gap: 1rem;
   align-items: center;
 }
-
 .empty-icon {
   font-size: 3rem;
   opacity: 0.5;
 }
-
 .success-icon {
   font-size: 4rem;
   color: var(--accent-emerald);
 }
-
 .error-icon {
   font-size: 4rem;
   color: var(--accent-rose);
 }
-
 .result-box h3 {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--text-primary);
 }
-
 .result-detail {
   color: var(--text-secondary);
   font-size: var(--font-size-md);
   line-height: 1.6;
 }
-
+.result-time {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.result-time strong {
+  color: var(--accent-cyan);
+  font-size: var(--font-size-lg);
+}
 .highlight {
   font-size: var(--font-size-xl);
   color: var(--accent-blue);
   font-weight: 700;
 }
-
 .download-section {
   margin-top: 2rem;
 }
-
 .pulsing {
   animation: pulse-glow 2s infinite;
   color: var(--accent-blue);

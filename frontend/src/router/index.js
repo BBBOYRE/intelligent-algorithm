@@ -1,29 +1,79 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import MainLayout from '../layouts/MainLayout.vue'
+import AuthLayout from '../layouts/AuthLayout.vue'
 
 const routes = [
   {
+    path: '/login',
+    component: AuthLayout,
+    children: [
+      {
+        path: '',
+        name: 'login',
+        component: () => import('../views/LoginView.vue'),
+        meta: { title: '登录', public: true },
+      },
+    ],
+  },
+  {
     path: '/',
-    name: 'home',
-    component: () => import('../views/HomeView.vue'),
-    meta: { title: '系统概览', icon: '🏠' },
-  },
-  {
-    path: '/upload',
-    name: 'upload',
-    component: () => import('../views/UploadView.vue'),
-    meta: { title: '文档上传', icon: '📄' },
-  },
-  {
-    path: '/chat',
-    name: 'chat',
-    component: () => import('../views/ChatView.vue'),
-    meta: { title: '智能问答', icon: '💬' },
-  },
-  {
-    path: '/table-fill',
-    name: 'tableFill',
-    component: () => import('../views/TableFillView.vue'),
-    meta: { title: '表格填写', icon: '📊' },
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('../views/DashboardView.vue'),
+        meta: { title: '工作台', icon: '🏠' },
+      },
+      {
+        path: 'upload',
+        name: 'upload',
+        component: () => import('../views/UploadView.vue'),
+        meta: { title: '文档上传', icon: '📄' },
+      },
+      {
+        path: 'doc-ops',
+        name: 'docOps',
+        component: () => import('../views/DocOpsView.vue'),
+        meta: { title: '文档操作', icon: '✏️' },
+      },
+      {
+        path: 'chat',
+        name: 'chat',
+        component: () => import('../views/ChatView.vue'),
+        meta: { title: '智能问答', icon: '💬' },
+      },
+      {
+        path: 'table-fill',
+        name: 'tableFill',
+        component: () => import('../views/TableFillView.vue'),
+        meta: { title: '表格填写', icon: '📊' },
+      },
+      {
+        path: 'knowledge-base',
+        name: 'knowledgeBase',
+        component: () => import('../views/KnowledgeBaseView.vue'),
+        meta: { title: '知识库管理', icon: '🗄️' },
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: () => import('../views/SettingsView.vue'),
+        meta: { title: '系统设置', icon: '⚙️' },
+      },
+      {
+        path: 'analytics',
+        name: 'analytics',
+        component: () => import('../views/AnalyticsView.vue'),
+        meta: { title: '数据分析', icon: '📈' },
+      },
+      {
+        path: 'team',
+        name: 'team',
+        component: () => import('../views/TeamView.vue'),
+        meta: { title: '团队空间', icon: '👥' },
+      },
+    ],
   },
 ]
 
@@ -32,8 +82,18 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title || '文档智能系统'} - 文档智能系统`
+  if (to.meta.public) {
+    next()
+    return
+  }
+  const token = localStorage.getItem('token')
+  if (!token) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

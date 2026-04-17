@@ -241,3 +241,9 @@ Thumbs.db
 node_modules/
 frontend/dist/
 yarn-error.log
+# IDE & tool configs
+.idea/
+.claude/
+
+# ChromaDB runtime data
+data/chroma_db/

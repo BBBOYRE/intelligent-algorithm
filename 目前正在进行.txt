@@ -1,0 +1,157 @@
+ Phase 1：基础设施（用户系统 + 前端重构）
+
+     1A. 数据库层
+
+     - 新建 server/database.py — SQLAlchemy 引擎 + session 工厂 + get_db 依赖
+     - 新建 server/models/user.py — 用户表（id, email, username, hashed_password, role, is_active, created_at）
+     - 新建 server/models/document.py — 文档记录表（id, user_id, file_name, file_size, format, chunk_count, status,
+     created_at）
+     - 新建 server/models/knowledge_base_model.py — 知识库表（id, user_id, name, collection_name, description,
+     created_at）
+     - 新建 alembic/ — 数据库迁移配置
+     - 修改 config.py — 添加 DATABASE_URL、AUTH_DISABLED、DEPLOYMENT_MODE
+     - 修改 requirements.txt — 添加 sqlalchemy, alembic, python-jose, passlib
+
+     1B. 认证系统
+
+     - 新建 server/auth/security.py — 密码哈希（bcrypt）、JWT 创建/验证、get_current_user 依赖
+     - 新建 server/auth/schemas.py — UserCreate, UserLogin, TokenResponse, UserProfile
+     - 新建 server/routes/auth.py — /api/auth/register, /api/auth/login, /api/auth/me
+     - 修改 所有现有路由 — 添加 Depends(get_current_user)，按 user_id 隔离数据
+     - 私有化部署可通过 AUTH_DISABLED=true 跳过认证
+
+     1C. 多知识库隔离
+
+     - 修改 core/knowledge_base.py — 按 user_id + kb_id 生成独立 ChromaDB collection
+     - 修改 server/dependencies.py — get_kb(user_id, kb_id) 解析正确的 collection
+     - 修改 server/routes/kb.py — 知识库 CRUD（创建、列表、删除、切换）
+
+     1D. 前端重构
+
+     - 引入 Naive UI 组件库（Vue 3 原生、暗色主题、中文支持、tree-shakeable）
+     - 引入 axios 替代 fetch（拦截器注入 auth token）
+     - 引入 @vicons/ionicons5 替代 emoji 图标
+     - 新建 src/stores/auth.js — 用户状态、token 管理、登录/登出
+     - 新建 src/api/http.js — axios 实例 + 请求/响应拦截器
+     - 新建 src/views/LoginView.vue — 登录/注册页
+     - 新建 src/views/DashboardView.vue — 真正的仪表盘（替代 HomeView）
+     - 新建 src/views/SettingsView.vue — 用户设置、密码修改、LLM 配置
+     - 新建 src/layouts/AuthLayout.vue — 登录页布局（无侧边栏）
+     - 新建 src/layouts/MainLayout.vue — 主布局（侧边栏 + 头部 + 内容区）
+     - 新建 src/components/KBSelector.vue — 侧边栏知识库切换下拉
+     - 修改 src/App.vue — 根据认证状态切换布局
+     - 修改 src/router/index.js — 路由守卫 + requiresAuth meta
+     - 修改 src/components/AppHeader.vue — 用户头像下拉菜单
+     - 修改 src/components/AppSidebar.vue — 知识库选择器 + 用户信息
+
+     ---
+     Phase 2：核心功能增强
+
+     2A. 批量处理 + 实时进度
+
+     - 新建 server/tasks/task_manager.py — asyncio 任务队列，任务 ID + 状态 + 进度
+     - 新建 server/tasks/document_tasks.py — 批量文档处理任务
+     - 新建 server/routes/tasks.py — GET /api/tasks/{id} 轮询进度
+     - 新建 src/components/TaskProgress.vue — 可复用进度组件
+     - 修改 server/routes/documents.py — 上传变为异步，返回 task_id
+     - 修改 core/document_parser.py — 增加 PDF（docling 已支持）、CSV、HTML 格式
+
+     2B. 知识库高级管理
+
+     - 新建 src/views/KnowledgeBaseView.vue — 知识库详情页（文档列表、搜索、删除单文档）
+     - 新建 src/components/DocumentList.vue — 可排序/筛选的文档表格
+     - 新建 src/components/SearchPanel.vue — 高级搜索（日期、格式、来源筛选）
+     - 修改 server/routes/kb.py — 文档列表、单文档删除、带筛选的搜索
+     - 修改 core/knowledge_base.py — 添加 remove_document(file_name) 方法
+
+     2C. 表格填写增强
+
+     - 修改 core/table_filler.py — 新增 preview_fill() 返回结构化数据（不写文件）
+     - 修改 server/routes/table.py — 新增 POST /api/table/preview 预览接口
+     - 修改 src/views/TableFillView.vue — 填写后先预览可编辑表格，确认后再下载
+
+     2D. 文档对比
+
+     - 新建 core/doc_comparator.py — 两文档 LLM 对比分析
+     - 新建 src/views/DocCompareView.vue — 并排对比视图
+     - 修改 server/routes/doc_ops.py — 新增 POST /api/doc-ops/compare
+
+     2E. 多格式导出
+
+     - 新建 utils/export_utils.py — docx→PDF、数据→CSV/JSON 转换
+     - 修改 server/routes/files.py — 新增 format 参数支持格式转换下载
+
+     ---
+     Phase 3：数据分析与审计
+
+     3A. 操作日志
+
+     - 新建 server/middleware/audit.py — FastAPI 中间件，记录每次 API 请求
+     - 新建 server/models/audit_log.py — 审计日志表（user_id, action, resource_type, details, duration_ms, created_at）
+     - 新建 server/routes/audit.py — 日志查询接口（管理员全量 + 用户个人）
+
+     3B. 使用统计仪表盘
+
+     - 引入 echarts + vue-echarts
+     - 新建 server/routes/analytics.py — 聚合统计接口（总览、时间序列、个人统计）
+     - 新建 src/views/AnalyticsView.vue — 图表仪表盘
+     - 新建 src/components/charts/UsageChart.vue — 使用趋势图
+     - 新建 src/components/charts/StatsCard.vue — 统计卡片
+
+     3C. 文档分析
+
+     - 修改 core/document_parser.py — 解析后计算元数据（字数、实体数）
+     - 修改 server/models/document.py — 添加 word_count, entity_count 字段
+
+     ---
+     Phase 4：协作与高级功能
+
+     4A. 团队工作空间
+
+     - 新建 server/models/team.py — teams 表 + team_members 表
+     - 新建 server/routes/teams.py — 团队 CRUD、邀请/移除成员
+     - 新建 server/auth/permissions.py — 权限检查器
+     - 新建 src/views/TeamView.vue — 团队管理页
+     - 修改 knowledge_bases 表 — 添加 team_id 支持团队共享知识库
+
+     4B. 开发者 API
+
+     - 新建 server/routes/api_keys.py — API Key 生成/列表/撤销
+     - 新建 server/auth/api_key_auth.py — API Key 认证依赖
+     - 修改 server/auth/security.py — get_current_user 支持 JWT + API Key 双模式
+
+     4C. Webhook 集成
+
+     - 新建 server/routes/webhooks.py — Webhook 注册 CRUD
+     - 新建 server/services/webhook_dispatcher.py — 事件触发异步推送
+
+     4D. 模板市场（远期）
+
+     - 新建 server/routes/marketplace.py — 公开模板浏览/上传/下载
+     - 新建 src/views/MarketplaceView.vue — 模板市场页面
+
+     ---
+     部署架构
+
+     - 修改 config.py — DEPLOYMENT_MODE (private/saas)、DATABASE_URL、AUTH_DISABLED
+     - 新建 docker/Dockerfile — 多阶段构建
+     - 新建 docker/docker-compose.yml — app + PostgreSQL
+     - 私有化部署保留 PyInstaller + Inno Setup 方案
+     - SaaS 部署使用 python main.py --web + 反向代理
+
+     实施顺序
+
+     Phase 1A → 1B → 1C → 1D（严格顺序，约 4-6 周）
+         ↓
+     Phase 2A / 2B / 2C（可并行，约 3-4 周）
+         ↓
+     Phase 3A → 3B / 3C（约 2-3 周）
+         ↓
+     Phase 4A → 4B → 4C → 4D（约 4-6 周）
+
+     验证方式
+
+     - Phase 1 完成后：能注册登录、创建知识库、上传文档、隔离数据
+     - Phase 2 完成后：批量上传有进度、表格填写可预览编辑、支持更多格式
+     - Phase 3 完成后：能看到使用统计图表、操作日志可查询
+     - Phase 4 完成后：团队协作、API 接入、Webhook 通知

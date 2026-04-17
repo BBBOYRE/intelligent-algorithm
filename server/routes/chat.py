@@ -1,21 +1,30 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from server.auth.security import get_current_user
+from server.models.user import User
+from server.dependencies import get_kb
+
 router = APIRouter()
+
 
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
 
+
 class ChatResponse(BaseModel):
     reply: str
 
+
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
+async def chat_endpoint(
+    req: ChatRequest,
+    current_user: User = Depends(get_current_user),
+):
     from core.agent import DocumentAgent
-    from core.knowledge_base import KnowledgeBase
     try:
-        agent = DocumentAgent(KnowledgeBase())
+        agent = DocumentAgent(get_kb(current_user.id))
         answer = agent.chat(req.message, req.history)
         return ChatResponse(reply=answer)
     except Exception as exc:

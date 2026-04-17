@@ -29,7 +29,7 @@ class DocumentParser:
         suffix = path.suffix.lower()
 
         # [核心修改]：拦截纯文本格式，直接绕过 Docling 解析器，防止其内部报错
-        if suffix in {".txt", ".md"}:
+        if suffix in {".txt", ".md", ".csv", ".html", ".htm"}:
             markdown = self._fallback_extract_text(path)
             return {
                 "file_name": path.name,
@@ -80,11 +80,17 @@ class DocumentParser:
         return [self.parse(path) for path in file_paths]
 
     @staticmethod
-    def _split_text(text: str, chunk_size: int = 700) -> list[str]:
+    def _split_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
         content = (text or "").strip()
         if not content:
             return []
-        return [content[i : i + chunk_size] for i in range(0, len(content), chunk_size)]
+        chunks = []
+        start = 0
+        while start < len(content):
+            end = start + chunk_size
+            chunks.append(content[start:end])
+            start = end - overlap
+        return chunks
 
     def _fallback_extract_text(self, path: Path) -> str:
         suffix = path.suffix.lower()
@@ -113,4 +119,17 @@ class DocumentParser:
                         lines.append(" | ".join(row_values))
             wb.close()
             return "\n".join(lines)
+        if suffix == ".csv":
+            import csv
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            lines: list[str] = []
+            for row in csv.reader(text.splitlines()):
+                if any(cell.strip() for cell in row):
+                    lines.append(" | ".join(cell.strip() for cell in row))
+            return "\n".join(lines)
+        if suffix in {".html", ".htm"}:
+            from bs4 import BeautifulSoup
+            html = path.read_text(encoding="utf-8", errors="ignore")
+            soup = BeautifulSoup(html, "html.parser")
+            return soup.get_text(separator="\n", strip=True)
         return path.read_text(encoding="utf-8", errors="ignore")

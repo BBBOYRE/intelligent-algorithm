@@ -10,6 +10,12 @@ from server.routes import (
     table_router,
     kb_router,
     files_router,
+    doc_ops_router,
+    auth_router,
+    tasks_router,
+    audit_router,
+    analytics_router,
+    teams_router,
 )
 from utils.file_utils import ensure_runtime_dirs
 
@@ -24,7 +30,11 @@ def get_resource_path(relative_path: str) -> str:
 def create_app() -> FastAPI:
     ensure_runtime_dirs()
 
-    app = FastAPI(title="智能文档系统 API", version="1.0.0")
+    # 初始化数据库
+    from server.database import init_db
+    init_db()
+
+    app = FastAPI(title="智能文档系统 API", version="2.0.0")
 
     app.add_middleware(
         CORSMiddleware,
@@ -35,11 +45,21 @@ def create_app() -> FastAPI:
         expose_headers=["X-Filled-Count"] # [核心修复] 暴露自定义请求头给前端
     )
 
+    app.include_router(auth_router, prefix="/api", tags=["Auth"])
     app.include_router(documents_router, prefix="/api", tags=["Documents"])
     app.include_router(chat_router, prefix="/api", tags=["Chat"])
     app.include_router(table_router, prefix="/api", tags=["Table"])
     app.include_router(kb_router, prefix="/api", tags=["KB"])
     app.include_router(files_router, prefix="/api", tags=["Files"])
+    app.include_router(doc_ops_router, prefix="/api", tags=["DocOps"])
+    app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
+    app.include_router(audit_router, prefix="/api", tags=["Audit"])
+    app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
+    app.include_router(teams_router, prefix="/api", tags=["Teams"])
+
+    # 审计中间件（记录写操作日志）
+    from server.middleware.audit import AuditMiddleware
+    app.add_middleware(AuditMiddleware)
 
     # 动态挂载前端静态文件
     frontend_dist = get_resource_path(os.path.join("frontend", "dist"))

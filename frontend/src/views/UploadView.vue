@@ -6,6 +6,21 @@
     </div>
 
     <div class="upload-section card-static">
+      <!-- 知识库状态栏 -->
+      <div class="kb-status-bar">
+        <div class="kb-info">
+          <span class="kb-label">知识库状态</span>
+          <span class="kb-chunks">已入库 <strong>{{ kbStats.total_chunks || 0 }}</strong> 个分块</span>
+          <span class="kb-docs" v-if="kbStats.documents">，<strong>{{ kbStats.documents.length }}</strong> 个文档</span>
+        </div>
+        <div class="kb-doc-list" v-if="kbStats.documents && kbStats.documents.length > 0">
+          <span class="doc-tag" v-for="doc in kbStats.documents" :key="doc.file_name">{{ doc.file_name }}</span>
+        </div>
+        <button class="btn btn-danger-sm" @click="handleClearKB" :disabled="isUploading || isClearing">
+          {{ isClearing ? '清空中...' : '清空知识库' }}
+        </button>
+      </div>
+
       <div 
         class="drop-zone" 
         :class="{ 'dragover': isDragging }"
@@ -63,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
@@ -72,10 +87,37 @@ const fileInput = ref(null)
 const files = ref([])
 const isDragging = ref(false)
 const isUploading = ref(false)
+const isClearing = ref(false)
 const uploadProgress = ref(0)
 const uploadStatus = ref('')
 const toast = useToast()
 const store = useAppStore()
+const kbStats = ref({ total_chunks: 0, documents: [] })
+
+const loadKBStats = async () => {
+  try {
+    kbStats.value = await api.getKBStats()
+  } catch (e) {
+    kbStats.value = { total_chunks: 0, documents: [] }
+  }
+}
+
+const handleClearKB = async () => {
+  if (!confirm('确定要清空知识库吗？所有已入库的文档数据将被删除。')) return
+  isClearing.value = true
+  try {
+    await api.clearKB()
+    toast.success('知识库已清空')
+    await loadKBStats()
+    await store.refreshKBStats()
+  } catch (e) {
+    toast.error('清空失败: ' + e.message)
+  } finally {
+    isClearing.value = false
+  }
+}
+
+onMounted(loadKBStats)
 
 const triggerFileInput = () => {
   if (!isUploading.value) fileInput.value.click()
@@ -104,14 +146,14 @@ const onFileSelected = (event) => {
 }
 
 const addFiles = (newFiles) => {
-  const allowedExtensions = ['.docx', '.xlsx', '.md', '.txt']
+  const allowedExtensions = ['.docx', '.xlsx', '.md', '.txt', '.csv', '.html', '.htm', '.pdf']
   const validFiles = newFiles.filter(file => {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
     return allowedExtensions.includes(ext)
   })
 
   if (validFiles.length < newFiles.length) {
-    toast.error('某些文件格式不支持，仅支持 docx, xlsx, md, txt')
+    toast.error('某些文件格式不支持，支持 docx, xlsx, md, txt, csv, html, pdf')
   }
 
   files.value = [...files.value, ...validFiles]
@@ -146,18 +188,39 @@ const uploadFiles = async () => {
       formData.append('files', file)
     })
 
-    uploadStatus.value = `正在上传并解析...这可能需要一些时间`
-    uploadProgress.value = 0.5 // mock progress
+    // 5个以上文件用异步模式
+    if (files.value.length > 5) {
+      uploadStatus.value = '正在上传文件...'
+      const asyncRes = await api.uploadFilesAsync(formData)
+      const taskId = asyncRes.task_id
 
-    const res = await api.uploadFiles(formData)
-    
+      // 轮询进度
+      uploadStatus.value = '后台解析中...'
+      let done = false
+      while (!done) {
+        await new Promise(r => setTimeout(r, 1000))
+        const task = await api.getTask(taskId)
+        uploadProgress.value = task.progress
+        uploadStatus.value = `正在解析: ${task.completed_count}/${task.total}`
+        if (task.status === 'completed' || task.status === 'failed') {
+          done = true
+          if (task.result) {
+            toast.success(`成功解析并入库 ${task.result.success_count} 个文件`)
+          }
+        }
+      }
+    } else {
+      uploadStatus.value = '正在上传并解析...'
+      uploadProgress.value = 0.3
+      const res = await api.uploadFiles(formData)
+      toast.success(`成功解析并入库 ${res.success_count} 个文件`)
+    }
+
     uploadProgress.value = 1.0
-    uploadStatus.value = `处理完成！`
-    
-    toast.success(`成功解析并入库 ${res.success_count} 个文件`)
-    
+    uploadStatus.value = '处理完成！'
     clearFiles()
     await store.refreshKBStats()
+    await loadKBStats()
   } catch (error) {
     toast.error(`上传失败: ${error.message}`)
     uploadStatus.value = `处理出错`
@@ -287,5 +350,62 @@ const uploadFiles = async () => {
   justify-content: space-between;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+}
+
+.kb-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+.kb-info {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.kb-info strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+.kb-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-right: 0.75rem;
+}
+.kb-doc-list {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.doc-tag {
+  padding: 0.2rem 0.6rem;
+  font-size: var(--font-size-xs, 12px);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: var(--accent-blue);
+  border-radius: var(--radius-sm, 4px);
+}
+.btn-danger-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: var(--font-size-sm, 13px);
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: var(--accent-rose);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  white-space: nowrap;
+}
+.btn-danger-sm:hover {
+  background: rgba(244, 63, 94, 0.25);
+}
+.btn-danger-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

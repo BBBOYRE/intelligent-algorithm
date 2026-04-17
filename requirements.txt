@@ -1,33 +1,21 @@
-# 文档解析
 docling>=2.0.0
 docling-core>=2.0.0
-
-# LLM 框架
 langchain>=0.3.0
 langchain-openai>=0.3.0
 langchain-community>=0.3.0
 langchain-ollama>=0.2.0
-
-# 向量数据库
 chromadb>=0.5.0
-
-# Embedding
 sentence-transformers>=3.0.0
-
-# 文档操作
 python-docx>=1.0.0
 openpyxl>=3.1.0
-
-# API & 桌面端
 fastapi>=0.103.0
 uvicorn>=0.23.2
 python-multipart>=0.0.6
 pywebview>=5.0.0
-
-# 工具
 python-dotenv>=1.0.0
 pydantic>=2.0.0
-
-# 打包
 pyinstaller>=6.0.0
-
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4

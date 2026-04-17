@@ -3,7 +3,7 @@
     <div class="hero-section">
       <h1 class="hero-title">基于大语言模型的<br/>文档理解与多源数据融合系统</h1>
       <p class="hero-subtitle">智能解析多格式文档，构建专属知识库，支持自然语言检索与模板自动填写，提升企业办公效率。</p>
-      
+
       <div class="hero-actions">
         <router-link to="/upload" class="btn btn-primary btn-lg">
           <span class="icon">🚀</span> 快速开始
@@ -15,25 +15,28 @@
     </div>
 
     <div class="features-grid">
-      <div class="card feature-card">
+      <router-link to="/upload" class="card feature-card clickable">
         <div class="feature-icon icon-blue">📄</div>
-        <h3>智能文档解析</h3>
-        <p>支持 docx, xlsx, md, txt 等多种格式，自动提取关键信息并结构化，无缝构建企业知识库。</p>
-      </div>
-      
-      <div class="card feature-card">
-        <div class="feature-icon icon-purple">💬</div>
-        <h3>自然语言交互</h3>
-        <p>基于先进的 LLM 和 RAG 技术，能够根据您的专属知识库精准回答提问，提供可靠的决策依据。</p>
-      </div>
-      
-      <div class="card feature-card">
+        <h3>非结构化文档信息提取</h3>
+        <p>支持 docx, xlsx, md, txt 等多种格式，自动识别并提取关键信息，结构化分块后存入本地向量知识库。</p>
+        <span class="feature-link">上传文档 →</span>
+      </router-link>
+
+      <router-link to="/doc-ops" class="card feature-card clickable">
+        <div class="feature-icon icon-purple">✏️</div>
+        <h3>文档智能操作交互</h3>
+        <p>通过自然语言指令对文档进行信息提取、内容编辑、格式转换、总结分析等智能操作，无需手动处理。</p>
+        <span class="feature-link">开始操作 →</span>
+      </router-link>
+
+      <router-link to="/table-fill" class="card feature-card clickable">
         <div class="feature-icon icon-emerald">📊</div>
-        <h3>模板自动填写</h3>
-        <p>上传空白模板表格，系统将自动从海量知识库中抽取匹配数据填入，彻底告别人工搬运数据。</p>
-      </div>
+        <h3>表格自定义数据填写</h3>
+        <p>上传空白模板表格，系统自动从知识库中检索匹配数据并精准填入，支持精细与粗略两种检索模式。</p>
+        <span class="feature-link">填写表格 →</span>
+      </router-link>
     </div>
-    
+
     <div class="status-section">
       <div class="card-static status-panel">
         <div class="status-header">
@@ -113,6 +116,17 @@ const store = useAppStore()
   flex-direction: column;
   align-items: flex-start;
   gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.feature-card.clickable {
+  cursor: pointer;
+  transition: transform var(--transition-fast, 0.2s), border-color var(--transition-fast, 0.2s);
+}
+.feature-card.clickable:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-blue);
 }
 
 .feature-icon {
@@ -147,6 +161,13 @@ const store = useAppStore()
 .feature-card p {
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.feature-link {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+  font-weight: 500;
+  margin-top: auto;
 }
 
 .status-section {

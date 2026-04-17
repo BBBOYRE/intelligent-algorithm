@@ -1,25 +1,33 @@
-import os
-from fastapi import APIRouter, UploadFile, File, HTTPException
+import asyncio
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from utils.file_utils import save_uploaded_file_fastapi
+from server.auth.security import get_current_user
+from server.models.user import User
+from server.dependencies import get_kb
+from server.tasks.task_manager import task_manager
+from server.tasks.document_tasks import process_document_batch
 
 router = APIRouter()
 
+
 @router.post("/documents/upload")
-async def upload_documents(files: list[UploadFile] = File(...)):
+async def upload_documents(
+    files: list[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """同步上传（少量文件直接处理）"""
     if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded or parameter 'files' is missing")
+        raise HTTPException(status_code=400, detail="No files uploaded")
 
     from core.document_parser import DocumentParser
-    from core.knowledge_base import KnowledgeBase
 
     parser = DocumentParser()
-    kb = KnowledgeBase()
+    kb = get_kb(current_user.id)
     success_count = 0
     errors = []
 
     for file in files:
         try:
-            # save file locally first
             file_path = await save_uploaded_file_fastapi(file)
             parsed = parser.parse(file_path)
             kb.add_document(parsed)
@@ -34,5 +42,32 @@ async def upload_documents(files: list[UploadFile] = File(...)):
         "status": "success",
         "success_count": success_count,
         "total": len(files),
-        "errors": errors
+        "errors": errors,
     }
+
+
+@router.post("/documents/upload-async")
+async def upload_documents_async(
+    files: list[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """异步上传（大量文件后台处理，返回 task_id 轮询进度）"""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    # 先保存所有文件到磁盘
+    file_paths = []
+    for file in files:
+        try:
+            fp = await save_uploaded_file_fastapi(file)
+            file_paths.append(fp)
+        except Exception as exc:
+            pass
+
+    if not file_paths:
+        raise HTTPException(status_code=500, detail="文件保存失败")
+
+    task = task_manager.create_task("document_batch", total=len(file_paths))
+    asyncio.create_task(process_document_batch(task, file_paths, current_user.id))
+
+    return {"status": "accepted", "task_id": task.id, "total": len(file_paths)}

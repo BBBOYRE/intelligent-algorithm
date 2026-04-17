@@ -1,0 +1,165 @@
+================================================================
+智能文档处理系统 - 工作交接文档
+================================================================
+生成时间：2026-04-17
+当前分支：hhdBranch
+================================================================
+
+
+一、快速启动
+----------------------------------------------------------------
+【环境要求】
+- Python 3.12（venv 已配置好，路径：./venv）
+- Node.js 22+（前端依赖已安装）
+
+【启动后端】
+cd "D:\智能算法\intelligent-algorithm-leziren (2)\intelligent-algorithm-leziren"
+.\venv\Scripts\python.exe main.py
+
+【启动后端（Web模式，浏览器访问）】
+.\venv\Scripts\python.exe main.py --web
+然后浏览器打开 http://127.0.0.1:8199
+
+【重新构建前端（改了前端代码后必须执行）】
+cd frontend
+npm run build
+
+【安装新依赖（如果 requirements.txt 有变化）】
+.\venv\Scripts\pip.exe install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+
+
+二、关键配置文件
+----------------------------------------------------------------
+【.env 文件】（项目根目录，不提交 git）
+AUTH_DISABLED=false        # true=免登录，false=启用登录注册
+LLM_PROVIDER=openai
+LLM_API_KEY=xxx            # 当前使用智谱 GLM-4-Flash
+LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+LLM_MODEL=glm-4-flash
+EMBEDDING_PROVIDER=local
+EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
+
+【config.py】
+- DATABASE_URL 默认 sqlite:///data/db/app.db
+- JWT_SECRET_KEY 生产环境务必修改
+- AUTH_DISABLED=true 时所有请求使用默认管理员账号（免登录）
+
+
+三、数据库
+----------------------------------------------------------------
+- 类型：SQLite（开发），可切换 PostgreSQL（生产）
+- 位置：data/db/app.db
+- 自动建表：启动时 init_db() 自动创建所有表，无需手动迁移
+- 表结构：users / documents / knowledge_bases / audit_logs
+
+【重置数据库】
+删除 data/db/app.db 文件，重启后自动重建
+
+
+四、知识库
+----------------------------------------------------------------
+- 向量库：ChromaDB，数据存储在 data/chroma_db/
+- 文档备份：data/chroma_db/_parsed_docs_storage.json
+- Embedding 模型：BAAI/bge-small-zh-v1.5（首次运行自动下载到 data/models/）
+- 每个用户有独立的 ChromaDB collection（格式：kb_{user_id}_default）
+
+【重置知识库】
+方式1：登录后在"文档上传"页面点击"清空知识库"
+方式2：删除 data/chroma_db/ 目录，重启后自动重建
+
+
+五、API 接口一览
+----------------------------------------------------------------
+认证：
+  POST /api/auth/register    注册
+  POST /api/auth/login       登录（返回 JWT token）
+  GET  /api/auth/me          获取当前用户信息
+
+文档：
+  POST /api/documents/upload         同步上传（≤5个文件）
+  POST /api/documents/upload-async   异步上传（>5个文件，返回 task_id）
+
+任务：
+  GET  /api/tasks/{task_id}   查询任务进度
+
+知识库：
+  GET    /api/kb/stats              知识库统计
+  GET    /api/kb/list               知识库列表
+  POST   /api/kb/create             创建知识库
+  DELETE /api/kb/{id}               删除知识库
+  DELETE /api/kb/clear              清空当前知识库
+  GET    /api/kb/documents          文档列表（支持搜索/筛选）
+  DELETE /api/kb/documents/{name}   删除单个文档
+
+问答：
+  POST /api/chat              RAG 智能问答
+
+表格填写：
+  POST /api/table/preview     预览填写结果（返回 JSON，不写文件）
+  POST /api/table/fill        执行填写并生成文件
+
+文档操作：
+  POST /api/doc-ops/execute   自然语言指令操作文档
+
+文件下载：
+  GET  /api/files/download?path=xxx   下载生成的文件
+
+分析：
+  GET  /api/analytics/overview   使用统计总览
+  GET  /api/analytics/usage      按天趋势数据
+  GET  /api/audit/logs           操作日志（分页）
+
+
+六、前端页面路由
+----------------------------------------------------------------
+/#/login          登录/注册页
+/#/               工作台仪表盘
+/#/upload         文档上传（支持 docx/xlsx/md/txt/csv/html/pdf）
+/#/doc-ops        文档智能操作（自然语言指令 + docx 格式修改）
+/#/chat           智能问答
+/#/table-fill     模板表格自动填写
+/#/knowledge-base 知识库管理（文档列表/搜索/删除）
+/#/analytics      数据分析（统计卡片 + 操作日志）
+/#/settings       系统设置（个人信息/密码/知识库管理）
+
+
+七、未完成的工作（Phase 4）
+----------------------------------------------------------------
+以下功能尚未实现，可在后续迭代中继续：
+
+4A. 团队工作空间
+    - server/models/team.py（teams + team_members 表）
+    - server/routes/teams.py（团队 CRUD、邀请成员）
+    - server/auth/permissions.py（权限检查器）
+    - src/views/TeamView.vue
+
+4B. 开发者 API Key
+    - server/routes/api_keys.py（生成/撤销 API Key）
+    - server/auth/api_key_auth.py（API Key 认证）
+    - 修改 security.py 支持 JWT + API Key 双模式
+
+4C. Webhook 集成
+    - server/routes/webhooks.py
+    - server/services/webhook_dispatcher.py
+
+4D. 模板市场（远期）
+    - 公开模板浏览/上传/下载
+
+另外 Phase 2/3 中有几个小项未完成：
+- 表格填写预览 UI（后端接口已有，前端 TableFillView 未接入预览步骤）
+- 文档对比功能（core/doc_comparator.py 未实现）
+- 多格式导出（utils/export_utils.py 未实现）
+- 文档分析元数据（字数/实体统计）
+
+
+八、注意事项
+----------------------------------------------------------------
+1. 修改前端代码后必须重新 npm run build，否则桌面端看不到变化
+2. 修改后端代码后必须重启 python main.py
+3. 改了分块策略（chunk_size/overlap）后，已入库文档需要重新上传
+4. 生产环境部署时务必修改 .env 中的 JWT_SECRET_KEY
+5. AUTH_DISABLED=true 时任何人都能访问，仅适合本地私有化使用
+6. 知识库数据在 data/ 目录，不要误删
+7. C 盘空间不足时 pip 安装会失败，可用 --cache-dir 指向 D 盘
+
+================================================================
