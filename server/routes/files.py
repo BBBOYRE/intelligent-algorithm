@@ -3,8 +3,37 @@ import shutil
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, Response
+from config import Config
 
 router = APIRouter()
+
+
+@router.get("/files/avatar/{filename}")
+async def get_avatar(filename: str):
+    avatar_dir = os.path.join(Config.UPLOAD_DIR, "avatars")
+    filepath = os.path.join(avatar_dir, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    return FileResponse(filepath)
+
+
+@router.get("/files/preview")
+async def preview_file(path: str = Query(...)):
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".txt", ".md", ".csv", ".json", ".log"):
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read(100000)
+        return {"type": "text", "content": content, "filename": os.path.basename(path)}
+    try:
+        from core.document_parser import DocumentParser
+        parser = DocumentParser()
+        parsed = parser.parse(path)
+        text = parsed.get("text") or parsed.get("raw_text") or "\n".join(parsed.get("chunks", []))
+        return {"type": "parsed", "content": text[:100000], "filename": os.path.basename(path)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cannot preview: {e}")
 
 
 @router.get("/files/download")

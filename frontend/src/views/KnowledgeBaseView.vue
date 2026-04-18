@@ -27,6 +27,13 @@
       <p>知识库中暂无文档</p>
       <router-link to="/upload" class="btn btn-primary">去上传文档</router-link>
     </div>
+
+    <n-modal v-model:show="showPreview" preset="card" :title="previewTitle" style="width:700px;max-height:80vh">
+      <div class="preview-content" v-if="previewContent">
+        <pre>{{ previewContent }}</pre>
+      </div>
+      <div v-else class="preview-loading">加载中...</div>
+    </n-modal>
   </div>
 </template>
 
@@ -39,6 +46,9 @@ const message = useMessage()
 const documents = ref([])
 const searchQuery = ref('')
 const filterFormat = ref(null)
+const showPreview = ref(false)
+const previewTitle = ref('')
+const previewContent = ref('')
 
 const formatOptions = [
   { label: 'Word (.docx)', value: '.docx' },
@@ -79,15 +89,23 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 80,
+    width: 140,
     align: 'center',
     render(row) {
-      return h(NButton, {
-        size: 'tiny',
-        type: 'error',
-        quaternary: true,
-        onClick: () => handleDelete(row.file_name),
-      }, () => '删除')
+      return h('div', { style: 'display:flex;gap:4px;justify-content:center' }, [
+        h(NButton, {
+          size: 'tiny',
+          type: 'info',
+          quaternary: true,
+          onClick: () => handlePreview(row),
+        }, () => '查看'),
+        h(NButton, {
+          size: 'tiny',
+          type: 'error',
+          quaternary: true,
+          onClick: () => handleDelete(row.file_name),
+        }, () => '删除'),
+      ])
     },
   },
 ]
@@ -107,6 +125,17 @@ const handleDelete = async (fileName) => {
     await loadDocuments()
   } catch (e) {
     message.error('删除失败: ' + (e.response?.data?.detail || e.message))
+  }
+}
+
+const handlePreview = async (row) => {
+  previewTitle.value = row.file_name
+  previewContent.value = ''
+  showPreview.value = true
+  if (row.preview) {
+    previewContent.value = row.preview
+  } else {
+    previewContent.value = '该文档暂无可预览内容'
   }
 }
 
@@ -154,5 +183,21 @@ onMounted(loadDocuments)
 .empty-icon {
   font-size: 3rem;
   opacity: 0.5;
+}
+.preview-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.preview-content pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+.preview-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
 }
 </style>

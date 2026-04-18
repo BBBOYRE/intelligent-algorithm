@@ -74,7 +74,14 @@
             </div>
           </div>
 
+          <div v-if="uploadStatus" class="upload-status" :class="uploadStatus.type">
+            {{ uploadStatus.text }}
+          </div>
           <div class="chat-input-area">
+            <input type="file" ref="fileInput" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,.xlsx,.xls,.pptx" style="display:none" @change="handleFileUpload" />
+            <button class="btn btn-ghost upload-btn" @click="$refs.fileInput.click()" :disabled="uploading" :title="'上传文档到知识库'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            </button>
             <textarea
               class="input chat-textarea"
               v-model="inputQuery"
@@ -95,9 +102,13 @@
 <script setup>
 import { computed, ref, nextTick, onMounted, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
+import api from '../api/index.js'
 
 const inputQuery = ref('')
 const messagesContainer = ref(null)
+const fileInput = ref(null)
+const uploading = ref(false)
+const uploadStatus = ref(null)
 const chatStore = useChatStore()
 
 const messages = computed(() => chatStore.activeSession?.messages || [])
@@ -142,6 +153,27 @@ const sendMessage = async () => {
   scrollToBottom()
 }
 
+const handleFileUpload = async (e) => {
+  const files = e.target.files
+  if (!files || !files.length) return
+  uploading.value = true
+  uploadStatus.value = { type: 'info', text: `正在上传 ${files.length} 个文件到知识库...` }
+  try {
+    const formData = new FormData()
+    for (const f of files) {
+      formData.append('files', f)
+    }
+    const res = await api.uploadFiles(formData)
+    uploadStatus.value = { type: 'success', text: `上传成功 ${res.success_count}/${res.total} 个文件` }
+  } catch (err) {
+    uploadStatus.value = { type: 'error', text: `上传失败: ${err?.message || '未知错误'}` }
+  } finally {
+    uploading.value = false
+    e.target.value = ''
+    setTimeout(() => { uploadStatus.value = null }, 4000)
+  }
+}
+
 const newSession = () => {
   chatStore.createSession()
 }
@@ -184,6 +216,7 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .sidebar-header {
@@ -191,10 +224,13 @@ watch(
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.8rem;
+  flex-shrink: 0;
 }
 
 .session-list {
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -243,6 +279,7 @@ watch(
 .chat-main {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .page-header {
@@ -261,6 +298,7 @@ watch(
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -418,6 +456,35 @@ watch(
   border-radius: var(--radius-md);
   flex-shrink: 0;
 }
+
+.upload-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+}
+
+.upload-btn:hover {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.upload-status {
+  padding: 0.5rem 1.5rem;
+  font-size: var(--font-size-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.upload-status.info { color: var(--accent-blue); }
+.upload-status.success { color: var(--accent-green, #22c55e); }
+.upload-status.error { color: var(--accent-red, #ef4444); }
 
 @media (max-width: 960px) {
   .chat-page {

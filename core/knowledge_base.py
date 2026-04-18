@@ -63,6 +63,24 @@ class KnowledgeBase:
                 self.all_parsed_docs = json.loads(self.docs_storage_file.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 self.all_parsed_docs = []
+    def _generate_summary(self, file_name: str, chunks: list[str]) -> str:
+        """Use LLM to generate a summary of the document."""
+        try:
+            from core.llm_factory import create_llm
+            llm = create_llm()
+            preview = "\n".join(chunks[:5])[:3000]
+            response = llm.invoke(
+                f"请用中文为以下文档生成一段简洁的摘要(100-200字)，概括文档的主题、关键内容和要点。\n\n"
+                f"文件名: {file_name}\n\n内容片段:\n{preview}"
+            )
+            content = getattr(response, "content", "")
+            if isinstance(content, list):
+                content = "\n".join(str(p) for p in content)
+            return str(content).strip() or ""
+        except Exception as e:
+            print(f"[SUMMARY] Failed to generate summary for {file_name}: {e}")
+            return ""
+
     def add_document(self, parsed_doc: dict[str, Any]) -> None:
         chunks = parsed_doc.get("chunks", [])
         if not chunks:
@@ -75,7 +93,8 @@ class KnowledgeBase:
             for idx in range(len(chunks))
         ]
         self.collection.upsert(documents=chunks, ids=ids, metadatas=metadatas)
-        # 去重：移除同名文件的旧记录后再追加
+        if "summary" not in parsed_doc or not parsed_doc["summary"]:
+            parsed_doc["summary"] = self._generate_summary(file_name, chunks)
         self.all_parsed_docs = [d for d in self.all_parsed_docs if d.get("file_name") != file_name]
         self.all_parsed_docs.append(parsed_doc)
         self.persist_dir_path.mkdir(parents=True, exist_ok=True)

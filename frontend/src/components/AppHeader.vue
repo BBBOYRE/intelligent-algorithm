@@ -5,6 +5,12 @@
         <span class="route-title">{{ currentRouteTitle }}</span>
       </div>
       <div class="header-actions">
+        <n-button quaternary class="inbox-btn" @click="router.push('/inbox')">
+          <template #icon>
+            <n-icon><mail-outline /></n-icon>
+          </template>
+          <n-badge :value="unreadCount" :max="99" v-if="unreadCount > 0" />
+        </n-button>
         <n-dropdown :options="userMenuOptions" @select="handleUserMenu">
           <n-button quaternary>
             <template #icon>
@@ -19,15 +25,17 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed, h, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
-import { PersonCircleOutline, SettingsOutline, LogOutOutline } from '@vicons/ionicons5'
+import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
+import api from '../api/index.js'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const unreadCount = ref(0)
 
 const currentRouteTitle = computed(() => route.meta.title || '系统概览')
 
@@ -40,11 +48,25 @@ const userMenuOptions = [
 ]
 
 const handleUserMenu = (key) => {
-  if (key === 'logout') {
+  if (key === 'profile') {
+    router.push('/settings')
+  } else if (key === 'logout') {
     authStore.logout()
     router.push('/login')
   }
 }
+
+const pollUnread = async () => {
+  try {
+    const res = await api.getUnreadCount()
+    unreadCount.value = res.count || 0
+  } catch {}
+}
+
+onMounted(() => {
+  pollUnread()
+  setInterval(pollUnread, 30000)
+})
 </script>
 
 <style scoped>
@@ -65,6 +87,16 @@ const handleUserMenu = (key) => {
   justify-content: space-between;
   height: 100%;
   padding: 0 2rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inbox-btn {
+  position: relative;
 }
 
 .route-title {

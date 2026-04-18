@@ -79,6 +79,12 @@ const routes = [
         component: () => import('../views/TeamView.vue'),
         meta: { title: '团队空间', icon: '👥' },
       },
+      {
+        path: 'inbox',
+        name: 'inbox',
+        component: () => import('../views/InboxView.vue'),
+        meta: { title: '收件箱', icon: '📬' },
+      },
     ],
   },
 ]

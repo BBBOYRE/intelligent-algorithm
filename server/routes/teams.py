@@ -153,6 +153,7 @@ async def invite_member(
     team_id: str,
     data: InviteMember,
     _: TeamMember = Depends(require_team_role("admin")),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if data.role not in ("viewer", "member", "admin"):
@@ -168,9 +169,28 @@ async def invite_member(
     if existing:
         raise HTTPException(status_code=409, detail="该用户已是团队成员")
 
-    db.add(TeamMember(team_id=team_id, user_id=target.id, role=data.role))
+    team = db.query(Team).filter(Team.id == team_id).first()
+    from server.models.inbox import InboxMessage
+    existing_invite = db.query(InboxMessage).filter(
+        InboxMessage.recipient_id == target.id,
+        InboxMessage.team_id == team_id,
+        InboxMessage.type == "team_invite",
+        InboxMessage.status == "unread",
+    ).first()
+    if existing_invite:
+        raise HTTPException(status_code=409, detail="已发送过邀请，等待对方处理")
+
+    invite = InboxMessage(
+        recipient_id=target.id,
+        sender_id=current_user.id,
+        type="team_invite",
+        title=f"邀请你加入团队「{team.name}」",
+        content=f"角色: {data.role}",
+        team_id=team_id,
+    )
+    db.add(invite)
     db.commit()
-    return {"detail": "邀请成功", "user_id": target.id, "role": data.role}
+    return {"detail": "邀请已发送", "user_id": target.id, "role": data.role}
 
 
 @router.patch("/teams/{team_id}/members/{user_id}")

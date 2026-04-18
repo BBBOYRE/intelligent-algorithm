@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 
 class UserCreate(BaseModel):
@@ -23,9 +24,16 @@ class UserProfile(BaseModel):
     email: str
     username: str
     role: str
+    avatar: Optional[str] = ""
+    bio: Optional[str] = ""
 
     class Config:
         from_attributes = True
+
+
+class ProfileUpdate(BaseModel):
+    username: Optional[str] = None
+    bio: Optional[str] = None
 
 
 TokenResponse.model_rebuild()

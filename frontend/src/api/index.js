@@ -170,6 +170,52 @@ export default {
     return http.delete(`/webhooks/${id}`).then(r => r.data)
   },
 
+  /* ---- LLM Settings ---- */
+  getLLMConfig() {
+    return http.get('/settings/llm').then(r => r.data)
+  },
+  updateLLMConfig(data) {
+    return http.put('/settings/llm', data).then(r => r.data)
+  },
+
+  /* ---- Inbox ---- */
+  getInbox() {
+    return http.get('/inbox').then(r => r.data)
+  },
+  getUnreadCount() {
+    return http.get('/inbox/unread-count').then(r => r.data)
+  },
+  markRead(msgId) {
+    return http.patch(`/inbox/${msgId}/read`).then(r => r.data)
+  },
+  acceptInvite(msgId) {
+    return http.post(`/inbox/${msgId}/accept`).then(r => r.data)
+  },
+  rejectInvite(msgId) {
+    return http.post(`/inbox/${msgId}/reject`).then(r => r.data)
+  },
+  sendInboxMessage(data) {
+    return http.post('/inbox/send', data).then(r => r.data)
+  },
+  deleteInboxMessage(msgId) {
+    return http.delete(`/inbox/${msgId}`).then(r => r.data)
+  },
+
+  /* ---- Profile ---- */
+  updateProfile(data) {
+    return http.put('/auth/profile', data).then(r => r.data)
+  },
+  uploadAvatar(formData) {
+    return http.post('/auth/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
+
+  /* ---- File Preview ---- */
+  previewFile(filePath) {
+    return http.get(`/files/preview?path=${encodeURIComponent(filePath)}`).then(r => r.data)
+  },
+
   /* ---- Knowledge Graph ---- */
   getKGFiles(kbId = 'default') {
     return http.get(`/knowledge-graph/files?kb_id=${kbId}`).then(r => r.data)

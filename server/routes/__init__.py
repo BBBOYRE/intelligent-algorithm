@@ -13,6 +13,8 @@ from server.routes.api_keys import router as api_keys_router
 from server.routes.webhooks import router as webhooks_router
 from server.routes.team_activity import router as team_activity_router
 from server.routes.knowledge_graph import router as kg_router
+from server.routes.settings import router as settings_router
+from server.routes.inbox import router as inbox_router
 
 __all__ = [
     "documents_router",
@@ -30,4 +32,6 @@ __all__ = [
     "webhooks_router",
     "team_activity_router",
     "kg_router",
+    "settings_router",
+    "inbox_router",
 ]

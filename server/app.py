@@ -20,6 +20,8 @@ from server.routes import (
     webhooks_router,
     team_activity_router,
     kg_router,
+    settings_router,
+    inbox_router,
 )
 from utils.file_utils import ensure_runtime_dirs
 
@@ -64,6 +66,8 @@ def create_app() -> FastAPI:
     app.include_router(webhooks_router, prefix="/api", tags=["Webhooks"])
     app.include_router(team_activity_router, prefix="/api", tags=["TeamActivity"])
     app.include_router(kg_router, prefix="/api", tags=["KnowledgeGraph"])
+    app.include_router(settings_router, prefix="/api", tags=["Settings"])
+    app.include_router(inbox_router, prefix="/api", tags=["Inbox"])
 
     # 审计中间件（记录写操作日志）
     from server.middleware.audit import AuditMiddleware

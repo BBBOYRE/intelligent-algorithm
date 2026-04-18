@@ -9,19 +9,36 @@
       <!-- 个人信息 -->
       <div class="card-static settings-card">
         <h3 class="card-title">个人信息</h3>
-        <div class="info-row">
-          <span class="info-label">用户名</span>
-          <span class="info-value">{{ authStore.user?.username || '-' }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">邮箱</span>
-          <span class="info-value">{{ authStore.user?.email || '-' }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">角色</span>
-          <n-tag :type="authStore.user?.role === 'admin' ? 'warning' : 'info'" size="small">
-            {{ authStore.user?.role === 'admin' ? '管理员' : '成员' }}
-          </n-tag>
+        <div class="profile-section">
+          <div class="avatar-area">
+            <div class="avatar-preview" @click="$refs.avatarInput.click()">
+              <img v-if="profileForm.avatar" :src="profileForm.avatar" alt="avatar" />
+              <span v-else class="avatar-placeholder">{{ (authStore.user?.username || '?')[0] }}</span>
+              <div class="avatar-overlay">更换</div>
+            </div>
+            <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+          </div>
+          <div class="profile-fields">
+            <div class="info-row">
+              <span class="info-label">用户名</span>
+              <n-input v-model:value="profileForm.username" size="small" style="max-width:200px" />
+            </div>
+            <div class="info-row">
+              <span class="info-label">邮箱</span>
+              <span class="info-value">{{ authStore.user?.email || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">角色</span>
+              <n-tag :type="authStore.user?.role === 'admin' ? 'warning' : 'info'" size="small">
+                {{ authStore.user?.role === 'admin' ? '管理员' : '成员' }}
+              </n-tag>
+            </div>
+            <div class="info-row">
+              <span class="info-label">个性签名</span>
+              <n-input v-model:value="profileForm.bio" size="small" style="max-width:300px" placeholder="写点什么..." />
+            </div>
+            <n-button type="primary" size="small" @click="handleSaveProfile" :loading="savingProfile" style="margin-top:0.5rem">保存</n-button>
+          </div>
         </div>
       </div>
 
@@ -37,6 +54,28 @@
           </n-form-item>
           <n-button type="primary" :disabled="!pwdForm.password || pwdForm.password.length < 6 || pwdForm.password !== pwdForm.confirm">
             更新密码
+          </n-button>
+        </n-form>
+      </div>
+
+      <!-- AI 模型配置 -->
+      <div class="card-static settings-card">
+        <h3 class="card-title">AI 模型配置</h3>
+        <n-form :model="llmForm" class="llm-form">
+          <n-form-item label="LLM 提供商">
+            <n-select v-model:value="llmForm.llm_provider" :options="providerOptions" placeholder="选择提供商" />
+          </n-form-item>
+          <n-form-item label="API Key">
+            <n-input v-model:value="llmForm.llm_api_key" type="password" show-password-on="click" placeholder="输入 API Key" />
+          </n-form-item>
+          <n-form-item label="Base URL">
+            <n-input v-model:value="llmForm.llm_base_url" placeholder="如 https://api.deepseek.com/v1" />
+          </n-form-item>
+          <n-form-item label="模型名称">
+            <n-input v-model:value="llmForm.llm_model" placeholder="如 deepseek-chat, glm-4-flash" />
+          </n-form-item>
+          <n-button type="primary" @click="handleSaveLLM" :loading="savingLLM">
+            保存配置
           </n-button>
         </n-form>
       </div>
@@ -170,6 +209,23 @@ const knowledgeBases = ref([])
 const showCreateKB = ref(false)
 const newKBForm = ref({ name: '', description: '' })
 const pwdForm = ref({ password: '', confirm: '' })
+const avatarInput = ref(null)
+
+const profileForm = ref({
+  username: authStore.user?.username || '',
+  bio: authStore.user?.bio || '',
+  avatar: authStore.user?.avatar || '',
+})
+const savingProfile = ref(false)
+
+const llmForm = ref({ llm_provider: '', llm_api_key: '', llm_base_url: '', llm_model: '' })
+const savingLLM = ref(false)
+const providerOptions = [
+  { label: 'OpenAI / 兼容接口', value: 'openai' },
+  { label: 'DeepSeek', value: 'deepseek' },
+  { label: '通义千问 (Qwen)', value: 'qwen' },
+  { label: 'Ollama (本地)', value: 'ollama' },
+]
 
 const apiKeys = ref([])
 const showCreateKey = ref(false)
@@ -183,11 +239,69 @@ const showHookSecret = ref(false)
 const newHookForm = ref({ url: '', events: '' })
 const hookSecret = ref('')
 
+const handleSaveProfile = async () => {
+  savingProfile.value = true
+  try {
+    const res = await api.updateProfile({ username: profileForm.value.username, bio: profileForm.value.bio })
+    if (authStore.user) {
+      authStore.user.username = res.username
+      authStore.user.bio = res.bio
+      localStorage.setItem('user', JSON.stringify(authStore.user))
+    }
+    message.success('个人信息已更新')
+  } catch (e) {
+    message.error('更新失败: ' + (e.response?.data?.detail || e.message))
+  } finally { savingProfile.value = false }
+}
+
+const handleAvatarUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const res = await api.uploadAvatar(formData)
+    profileForm.value.avatar = res.avatar
+    if (authStore.user) {
+      authStore.user.avatar = res.avatar
+      localStorage.setItem('user', JSON.stringify(authStore.user))
+    }
+    message.success('头像已更新')
+  } catch (e) {
+    message.error('上传失败: ' + (e.response?.data?.detail || e.message))
+  }
+  e.target.value = ''
+}
+
 const loadKBs = async () => {
   try {
     const res = await api.listKBs()
     knowledgeBases.value = res.knowledge_bases || []
   } catch { /* ignore */ }
+}
+
+const loadLLMConfig = async () => {
+  try {
+    const res = await api.getLLMConfig()
+    llmForm.value = {
+      llm_provider: res.llm_provider || '',
+      llm_api_key: res.llm_api_key || '',
+      llm_base_url: res.llm_base_url || '',
+      llm_model: res.llm_model || '',
+    }
+  } catch { /* ignore */ }
+}
+
+const handleSaveLLM = async () => {
+  savingLLM.value = true
+  try {
+    await api.updateLLMConfig(llmForm.value)
+    message.success('AI 模型配置已保存，新对话将使用新配置')
+  } catch (e) {
+    message.error('保存失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    savingLLM.value = false
+  }
 }
 
 const handleCreateKB = async () => {
@@ -294,6 +408,7 @@ onMounted(() => {
   loadKBs()
   loadApiKeys()
   loadWebhooks()
+  loadLLMConfig()
 })
 </script>
 
@@ -355,6 +470,30 @@ onMounted(() => {
 .pwd-form {
   max-width: 400px;
 }
+.llm-form {
+  max-width: 500px;
+}
+.profile-section {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.avatar-area { flex-shrink: 0; }
+.avatar-preview {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--bg-secondary); border: 2px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+}
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-placeholder { font-size: 2rem; font-weight: 700; color: var(--text-muted); }
+.avatar-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: var(--font-size-xs); opacity: 0; transition: opacity 0.2s;
+}
+.avatar-preview:hover .avatar-overlay { opacity: 1; }
+.profile-fields { flex: 1; }
 .kb-card {
   min-height: 200px;
 }

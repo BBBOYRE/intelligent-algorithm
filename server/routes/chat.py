@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy.orm import Session
 import uuid
+import traceback
 from datetime import datetime
 
 from server.auth.security import get_current_user
@@ -97,20 +98,25 @@ async def chat_endpoint(
     db: Session = Depends(get_db)
 ):
     from core.agent import DocumentAgent
-    
+    import asyncio
+
     # Ensure session exists
     session_id = req.session_id
-    if session_id:
-        session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
-        if not session:
-            session = ChatSession(id=session_id, user_id=current_user.id)
+    try:
+        if session_id:
+            session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
+            if not session:
+                session = ChatSession(id=session_id, user_id=current_user.id)
+                db.add(session)
+                db.commit()
+        else:
+            session = ChatSession(id=f"chat_{uuid.uuid4().hex[:8]}", user_id=current_user.id)
             db.add(session)
             db.commit()
-    else:
-        session = ChatSession(id=f"chat_{uuid.uuid4().hex[:8]}", user_id=current_user.id)
-        db.add(session)
-        db.commit()
-        session_id = session.id
+            session_id = session.id
+    except Exception as exc:
+        print(f"[CHAT ERROR] Session creation failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"会话创建失败: {exc}")
 
     # Insert user message
     user_msg = ChatMessage(
@@ -120,12 +126,13 @@ async def chat_endpoint(
         content=req.message
     )
     db.add(user_msg)
-    
+
     try:
         kb = get_kb(current_user.id, req.kb_id, team_id=req.team_id)
         agent = DocumentAgent(kb)
-        answer = agent.chat(req.message, req.history)
+        answer = await asyncio.to_thread(agent.chat, req.message, req.history)
     except Exception as exc:
+        print(f"[CHAT ERROR] LLM call failed: {traceback.format_exc()}")
         answer = f"对话请求失败: {exc}"
 
     # Insert assistant message
@@ -136,8 +143,10 @@ async def chat_endpoint(
         content=answer
     )
     db.add(asst_msg)
-    
+
     session.updated_at = datetime.utcnow()
     db.commit()
+
+    return ChatResponse(reply=answer, session_id=session_id)
 
     return ChatResponse(reply=answer, session_id=session_id)
