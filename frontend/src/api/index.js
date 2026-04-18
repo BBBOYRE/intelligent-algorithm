@@ -68,6 +68,51 @@ export default {
   chat(message, history = [], extraOptions = {}) {
     return http.post('/chat', { message, history, ...extraOptions }).then(r => r.data)
   },
+
+  async chatStream(message, history = [], extraOptions = {}, onChunk) {
+    const payload = { message, history, ...extraOptions };
+    const token = localStorage.getItem("token");
+    let url = http.defaults.baseURL ? `${http.defaults.baseURL}/chat` : '/api/chat';
+    
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
+    const sessionId = response.headers.get("X-Session-ID") || extraOptions.session_id;
+
+    if (!response.body) {
+      const text = await response.text();
+      return { reply: text, session_id: sessionId };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let fullReply = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      fullReply += chunk;
+      if (onChunk) {
+        onChunk(chunk, fullReply);
+      }
+    }
+
+    return { reply: fullReply, session_id: Number(sessionId) || sessionId };
+  },
+
   getChatSessions() {
     return http.get('/chat/sessions').then(r => r.data)
   },
