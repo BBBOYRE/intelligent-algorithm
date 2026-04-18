@@ -143,22 +143,39 @@ export const useChatStore = defineStore('chat', () => {
         const historyPayload = session.messages
           .slice(0, msgIdx)
           .map(m => ({ role: m.role, content: m.content }))
+        
+        // Add placeholder message for streaming
+        const assistMessageId = uid('msg')
+        session.messages.push({
+          id: assistMessageId,
+          role: 'assistant',
+          content: '',
+          created_at: nowIso(),
+        })
+        
         try {
-          const res = await api.chat(current.text, historyPayload, { session_id: session.id })
-          const reply = res?.reply || res?.answer || String(res || '')
-          session.messages.push({
-            id: res?.message_id || uid('msg'),
-            role: 'assistant',
-            content: reply || "I don't have an answer.",
-            created_at: nowIso(),
-          })
+          const res = await api.chatStream(
+            current.text, 
+            historyPayload, 
+            { session_id: session.id },
+            (chunk, fullReply) => {
+              const msg = session.messages.find(m => m.id === assistMessageId)
+              if (msg) {
+                msg.content = fullReply
+              }
+            }
+          )
+          
+          // Verify final message content
+          const finalMsg = session.messages.find(m => m.id === assistMessageId)
+          if (finalMsg && !finalMsg.content) {
+             finalMsg.content = res?.reply || "I don't have an answer."
+          }
         } catch (err) {
-          session.messages.push({
-            id: uid('msg'),
-            role: 'assistant',
-            content: `[请求出错] ${err?.message || '未知错误'}`,
-            created_at: nowIso(),
-          })
+          const errMsg = session.messages.find(m => m.id === assistMessageId)
+          if (errMsg) {
+            errMsg.content = `[请求出错] ${err?.message || '未知错误'}`
+          }
         }
         session.updated_at = nowIso()
         // Instead of saveState full payload, we refetch to ensure consistency if desired, or skip

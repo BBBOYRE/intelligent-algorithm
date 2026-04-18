@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy.orm import Session
@@ -127,26 +128,48 @@ async def chat_endpoint(
     )
     db.add(user_msg)
 
-    try:
-        kb = get_kb(current_user.id, req.kb_id, team_id=req.team_id)
-        agent = DocumentAgent(kb)
-        answer = await asyncio.to_thread(agent.chat, req.message, req.history)
-    except Exception as exc:
-        print(f"[CHAT ERROR] LLM call failed: {traceback.format_exc()}")
-        answer = f"对话请求失败: {exc}"
+    def generate_response():
+        try:
+            kb = get_kb(current_user.id, req.kb_id, team_id=req.team_id)
+            agent = DocumentAgent(kb)
+            full_answer = ""
+            for chunk in agent.stream_chat(req.message, req.history):
+                content = str(chunk)
+                full_answer += content
+                yield content
+            
+            # Use a new DB session for background task since the request DB session might close
+            from server.database import SessionLocal
+            with SessionLocal() as bg_db:
+                bg_session = bg_db.query(ChatSession).filter_by(id=session_id).first()
+                if bg_session:
+                    asst_msg = ChatMessage(
+                        id=f"msg_{uuid.uuid4().hex[:8]}",
+                        session_id=session_id,
+                        role="assistant",
+                        content=full_answer
+                    )
+                    bg_db.add(asst_msg)
+                    bg_session.updated_at = datetime.utcnow()
+                    bg_db.commit()
 
-    # Insert assistant message
-    asst_msg = ChatMessage(
-        id=f"msg_{uuid.uuid4().hex[:8]}",
-        session_id=session_id,
-        role="assistant",
-        content=answer
-    )
-    db.add(asst_msg)
-
-    session.updated_at = datetime.utcnow()
-    db.commit()
-
-    return ChatResponse(reply=answer, session_id=session_id)
-
-    return ChatResponse(reply=answer, session_id=session_id)
+        except Exception as exc:
+            err_msg = f"对话请求失败: {exc}"
+            print(f"[CHAT ERROR] LLM call failed: {traceback.format_exc()}")
+            yield err_msg
+            
+            from server.database import SessionLocal
+            with SessionLocal() as bg_db:
+                bg_session = bg_db.query(ChatSession).filter_by(id=session_id).first()
+                if bg_session:
+                    asst_msg = ChatMessage(
+                        id=f"msg_{uuid.uuid4().hex[:8]}",
+                        session_id=session_id,
+                        role="assistant",
+                        content=err_msg
+                    )
+                    bg_db.add(asst_msg)
+                    bg_session.updated_at = datetime.utcnow()
+                    bg_db.commit()
+    
+    return StreamingResponse(generate_response(), media_type="text/plain", headers={"X-Session-ID": session_id})

@@ -140,3 +140,31 @@ class DocumentAgent:
         chat_history.append({"role": "assistant", "content": final_answer})
 
         return final_answer
+
+    def stream_chat(self, message: str, chat_history: list[dict[str, Any]] | None = None) -> Any:
+        if chat_history is None:
+            chat_history = []
+
+        from core.retriever import retrieve_context
+
+        context = retrieve_context(self.kb, message, top_k=15)
+        fallback = self._get_fallback_context()
+        if context and fallback:
+            context = context + "\n\n---\n\n" + fallback
+        elif not context:
+            context = fallback
+        formatted_history = self._format_history(chat_history)
+        kb_info = self._get_kb_info()
+
+        if context:
+            chain = self.rag_prompt | self.llm
+            for chunk in chain.stream(
+                {"question": message, "context": context, "history": formatted_history, "kb_info": kb_info}
+            ):
+                yield chunk.content
+        else:
+            chain = self.general_prompt | self.llm
+            for chunk in chain.stream(
+                {"question": message, "history": formatted_history, "kb_info": kb_info}
+            ):
+                yield chunk.content

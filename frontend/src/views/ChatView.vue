@@ -62,11 +62,14 @@
               <div class="avatar">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
               <div class="message-content">
                 <div class="message-meta">{{ msg.role === 'user' ? '用户' : '智能助手' }}</div>
-                <div class="message-text" v-html="formatMessage(msg.content)"></div>
+                <div v-if="msg.content" class="message-text" v-html="formatMessage(msg.content)"></div>
+                <div v-else class="typing-indicator" style="margin-top: 8px;">
+                  <span></span><span></span><span></span>
+                </div>
               </div>
             </div>
 
-            <div v-if="isTyping" class="message-wrapper message-assistant">
+            <div v-if="isTyping && messages.length > 0 && messages[messages.length - 1].role === 'user'" class="message-wrapper message-assistant">
               <div class="avatar">AI</div>
               <div class="message-content typing-indicator">
                 <span></span><span></span><span></span>
@@ -103,6 +106,8 @@
 import { computed, ref, nextTick, onMounted, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import api from '../api/index.js'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const inputQuery = ref('')
 const messagesContainer = ref(null)
@@ -116,7 +121,12 @@ const isTyping = computed(() => chatStore.isSessionWaiting(chatStore.activeSessi
 
 const formatMessage = (text) => {
   if (!text) return ''
-  return text.replace(/\n/g, '<br/>')
+  try {
+    const rawHtml = marked(text)
+    return DOMPurify.sanitize(rawHtml)
+  } catch (e) {
+    return text.replace(/\n/g, '<br/>')
+  }
 }
 
 const formatTime = (iso) => {
