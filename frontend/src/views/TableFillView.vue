@@ -390,7 +390,7 @@ const confirmFill = async () => {
   color: var(--text-muted);
 }
 .change-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.04);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   padding: 0.5rem 1rem;
@@ -399,7 +399,7 @@ const confirmFill = async () => {
   transition: all var(--transition-fast);
 }
 .change-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.08);
 }
 .precision-section {
   display: flex;
@@ -431,7 +431,7 @@ const confirmFill = async () => {
 }
 .toggle-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.04);
 }
 .toggle-btn.active {
   background: var(--accent-blue);
@@ -517,7 +517,7 @@ const confirmFill = async () => {
   font-size: var(--font-size-sm);
 }
 .result-time strong {
-  color: var(--accent-cyan);
+  color: var(--accent-blue);
   font-size: var(--font-size-lg);
 }
 .highlight {
@@ -550,7 +550,7 @@ const confirmFill = async () => {
   text-align: left;
 }
 .preview-table th {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--bg-input);
   color: var(--text-primary);
   font-weight: 600;
   white-space: nowrap;
@@ -565,7 +565,7 @@ const confirmFill = async () => {
   padding: 0.2rem 0;
 }
 .cell-input:focus {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(51, 112, 255, 0.04);
 }
 .preview-actions {
   display: flex;

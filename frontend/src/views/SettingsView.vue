@@ -454,7 +454,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .info-row:last-child {
   border-bottom: none;

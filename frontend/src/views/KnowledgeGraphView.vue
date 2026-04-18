@@ -148,13 +148,13 @@ const renderGraph = async (data) => {
   const nodes = new DataSet(data.nodes.map(n => ({
     id: n.id, label: n.label,
     color: { background: typeNodeColor[n.type] || '#64748b', border: 'transparent', highlight: { background: '#fff', border: typeNodeColor[n.type] || '#64748b' } },
-    font: { color: '#f1f5f9', size: 14 }, shape: 'dot', size: 20, _raw: n,
+    font: { color: '#1f2329', size: 14 }, shape: 'dot', size: 20, _raw: n,
   })))
 
   const edges = new DataSet(data.edges.map((e, i) => ({
     id: `e${i}`, from: e.from, to: e.to, label: e.label,
-    font: { color: '#94a3b8', size: 11, strokeWidth: 0 },
-    color: { color: 'rgba(148,163,184,0.4)', highlight: '#3b82f6' },
+    font: { color: '#8f959e', size: 11, strokeWidth: 0 },
+    color: { color: 'rgba(0,0,0,0.15)', highlight: '#3b82f6' },
     arrows: 'to', smooth: { type: 'curvedCW', roundness: 0.2 },
   })))
 

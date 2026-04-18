@@ -291,7 +291,7 @@ const uploadFiles = async () => {
 }
 
 .file-list {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-input);
   border-radius: var(--radius-md);
   padding: 1.5rem;
 }
@@ -385,7 +385,7 @@ const uploadFiles = async () => {
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-input);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
 }
@@ -395,7 +395,7 @@ const uploadFiles = async () => {
   color: var(--text-secondary);
 }
 .kb-info strong {
-  color: var(--accent-cyan);
+  color: var(--accent-blue);
   font-weight: 700;
 }
 .kb-label {
@@ -412,16 +412,16 @@ const uploadFiles = async () => {
 .doc-tag {
   padding: 0.2rem 0.6rem;
   font-size: var(--font-size-xs, 12px);
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(51, 112, 255, 0.06);
+  border: 1px solid rgba(51, 112, 255, 0.15);
   color: var(--accent-blue);
   border-radius: var(--radius-sm, 4px);
 }
 .btn-danger-sm {
   padding: 0.35rem 0.85rem;
   font-size: var(--font-size-sm, 13px);
-  background: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: rgba(245, 74, 69, 0.06);
+  border: 1px solid rgba(245, 74, 69, 0.15);
   color: var(--accent-rose);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;

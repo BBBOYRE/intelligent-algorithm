@@ -128,15 +128,15 @@ onMounted(loadInbox)
   padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-subtle);
   gap: 1rem;
 }
-.inbox-item.unread { background: rgba(59, 130, 246, 0.05); }
+.inbox-item.unread { background: rgba(51, 112, 255, 0.04); }
 .inbox-item:last-child { border-bottom: none; }
 .inbox-item-left { display: flex; gap: 0.75rem; flex: 1; min-width: 0; }
 .inbox-type-badge {
   padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); font-size: var(--font-size-xs);
   font-weight: 600; flex-shrink: 0; height: fit-content; margin-top: 0.1rem;
 }
-.inbox-type-badge.team_invite { background: rgba(234, 179, 8, 0.15); color: #eab308; }
-.inbox-type-badge.message { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+.inbox-type-badge.team_invite { background: rgba(255, 149, 0, 0.08); color: var(--accent-amber); }
+.inbox-type-badge.message { background: rgba(51, 112, 255, 0.08); color: var(--accent-blue); }
 .inbox-item-info { min-width: 0; }
 .inbox-title { font-weight: 600; color: var(--text-primary); }
 .inbox-meta { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 0.2rem; }

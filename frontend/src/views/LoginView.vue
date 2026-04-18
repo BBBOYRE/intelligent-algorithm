@@ -118,7 +118,7 @@ const handleRegister = async () => {
   font-size: 1.75rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  color: var(--accent-yellow);
+  color: var(--text-primary);
 }
 .login-subtitle {
   text-align: center;

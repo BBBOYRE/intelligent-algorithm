@@ -89,6 +89,7 @@
             <div class="result-actions">
               <button class="copy-btn" @click="copyResult">复制结果</button>
               <button v-if="result.output_path" class="download-btn" @click="downloadFile">下载修改后文档</button>
+              <button v-if="result.output_path && sourcePath" class="download-btn" @click="writeBackFile">写回原文件</button>
             </div>
           </div>
           <div class="result-meta">
@@ -158,6 +159,7 @@ const result = ref(null)
 const instruction = ref('')
 const toast = useToast()
 const activeTab = ref('ops')
+const sourcePath = ref('')
 
 const compareFileA = ref(null)
 const compareFileB = ref(null)
@@ -277,18 +279,31 @@ const startExecute = async () => {
   if (!docFile.value || !instruction.value.trim()) return
   isProcessing.value = true
   result.value = null
+  sourcePath.value = ''
   try {
     const formData = new FormData()
     formData.append('file', docFile.value)
     formData.append('instruction', instruction.value)
     const res = await api.executeDocOp(formData)
     result.value = res
+    if (res.source_path) sourcePath.value = res.source_path
     toast.success('操作执行完成！')
   } catch (error) {
     toast.error('执行失败: ' + error.message)
     result.value = { status: 'error', error: error.message }
   } finally {
     isProcessing.value = false
+  }
+}
+
+const writeBackFile = async () => {
+  if (!result.value?.output_path || !sourcePath.value) return
+  if (!confirm('确定要用修改后的文件覆盖原文件吗？此操作不可撤销。')) return
+  try {
+    await api.writeBack(result.value.output_path, sourcePath.value)
+    toast.success('已写回原文件')
+  } catch (e) {
+    toast.error('写回失败: ' + (e.response?.data?.detail || e.message))
   }
 }
 
@@ -382,7 +397,7 @@ const renderMarkdown = (text) => {
   color: var(--text-muted);
 }
 .change-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.04);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   padding: 0.5rem 1rem;
@@ -391,7 +406,7 @@ const renderMarkdown = (text) => {
   transition: all var(--transition-fast);
 }
 .change-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.08);
 }
 .instruction-section {
   display: flex;
@@ -406,8 +421,8 @@ const renderMarkdown = (text) => {
 .quick-btn {
   padding: 0.35rem 0.75rem;
   font-size: var(--font-size-sm, 13px);
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(51, 112, 255, 0.06);
+  border: 1px solid rgba(51, 112, 255, 0.15);
   color: var(--accent-blue);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -476,7 +491,7 @@ const renderMarkdown = (text) => {
   justify-content: space-between;
 }
 .success-badge {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(52, 199, 89, 0.08);
   color: var(--accent-emerald);
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-sm, 4px);
@@ -488,7 +503,7 @@ const renderMarkdown = (text) => {
   gap: 0.5rem;
 }
 .copy-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.04);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   padding: 0.35rem 0.75rem;
@@ -498,11 +513,11 @@ const renderMarkdown = (text) => {
   transition: all var(--transition-fast, 0.2s);
 }
 .copy-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.08);
   color: var(--text-primary);
 }
 .download-btn {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(52, 199, 89, 0.06);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: var(--accent-emerald);
   padding: 0.35rem 0.75rem;
@@ -513,7 +528,7 @@ const renderMarkdown = (text) => {
   transition: all var(--transition-fast, 0.2s);
 }
 .download-btn:hover {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(52, 199, 89, 0.12);
 }
 .result-meta {
   display: flex;

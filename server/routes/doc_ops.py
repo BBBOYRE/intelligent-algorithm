@@ -1,9 +1,17 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from pydantic import BaseModel
 from utils.file_utils import save_uploaded_file_fastapi
 from server.auth.security import get_current_user
 from server.models.user import User
+import shutil
+import os
 
 router = APIRouter()
+
+
+class WriteBackRequest(BaseModel):
+    output_path: str
+    source_path: str
 
 
 @router.post("/doc-ops/execute")
@@ -21,9 +29,26 @@ async def execute_doc_operation(
         from core.doc_operator import DocOperator
         operator = DocOperator()
         result = operator.execute(file_path, instruction)
+        result["source_path"] = file_path
         return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/doc-ops/write-back")
+async def write_back(
+    req: WriteBackRequest,
+    current_user: User = Depends(get_current_user),
+):
+    if not req.output_path or not os.path.exists(req.output_path):
+        raise HTTPException(status_code=404, detail="Output file not found")
+    if not req.source_path:
+        raise HTTPException(status_code=400, detail="Source path is required")
+    try:
+        shutil.copyfile(req.output_path, req.source_path)
+        return {"status": "success", "message": f"已写回到 {os.path.basename(req.source_path)}"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Write back failed: {exc}")
 
 
 @router.post("/doc-ops/compare")

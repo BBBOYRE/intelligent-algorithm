@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
+  <n-config-provider :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
     <n-message-provider>
       <n-dialog-provider>
         <router-view />
@@ -9,33 +9,37 @@
 </template>
 
 <script setup>
-import { darkTheme, zhCN, dateZhCN } from 'naive-ui'
+import { zhCN, dateZhCN } from 'naive-ui'
 
 const themeOverrides = {
   common: {
-    primaryColor: '#002EA6',
-    primaryColorHover: '#1a4fd0',
-    primaryColorPressed: '#001d6e',
-    primaryColorSuppl: '#FFE76F',
-    bodyColor: '#0a0f1e',
-    cardColor: 'rgba(13, 21, 41, 0.85)',
-    modalColor: '#0d1529',
-    popoverColor: '#0d1529',
-    tableColor: 'rgba(13, 21, 41, 0.85)',
-    inputColor: 'rgba(255, 255, 255, 0.06)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    primaryColor: '#3370ff',
+    primaryColorHover: '#5b8def',
+    primaryColorPressed: '#245bdb',
+    primaryColorSuppl: '#3370ff',
+    bodyColor: '#ffffff',
+    cardColor: '#ffffff',
+    modalColor: '#ffffff',
+    popoverColor: '#ffffff',
+    tableColor: '#ffffff',
+    inputColor: '#f2f3f5',
+    borderColor: '#e5e6eb',
+    textColorBase: '#1f2329',
+    textColor1: '#1f2329',
+    textColor2: '#646a73',
+    textColor3: '#8f959e',
   },
   Button: {
-    textColorPrimary: '#FFE76F',
-    colorPrimary: '#002EA6',
-    colorHoverPrimary: '#1a4fd0',
-    colorPressedPrimary: '#001d6e',
-    borderPrimary: '#002EA6',
-    borderHoverPrimary: '#1a4fd0',
+    textColorPrimary: '#ffffff',
+    colorPrimary: '#3370ff',
+    colorHoverPrimary: '#5b8def',
+    colorPressedPrimary: '#245bdb',
+    borderPrimary: '#3370ff',
+    borderHoverPrimary: '#5b8def',
   },
   Tag: {
-    colorInfo: 'rgba(0, 46, 166, 0.2)',
-    textColorInfo: '#5b8def',
+    colorInfo: 'rgba(51, 112, 255, 0.08)',
+    textColorInfo: '#3370ff',
   },
 }
 </script>

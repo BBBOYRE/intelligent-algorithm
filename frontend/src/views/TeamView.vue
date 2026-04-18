@@ -535,7 +535,7 @@ onMounted(loadTeams)
   align-items: center;
   gap: 0.75rem;
   padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: var(--font-size-sm);
 }
 .activity-user { font-weight: 600; color: var(--accent-blue); min-width: 60px; }

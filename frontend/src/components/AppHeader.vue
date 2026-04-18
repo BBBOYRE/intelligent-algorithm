@@ -78,7 +78,7 @@ onMounted(() => {
   z-index: 90;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background: rgba(10, 15, 30, 0.85);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .header-content {
@@ -113,7 +113,7 @@ onMounted(() => {
   display: block;
   width: 4px;
   height: 16px;
-  background: var(--accent-yellow);
+  background: var(--accent-blue);
   border-radius: 2px;
 }
 </style>

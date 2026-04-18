@@ -114,7 +114,7 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  color: var(--accent-yellow);
+  color: var(--text-primary);
 }
 .welcome-subtitle {
   color: var(--text-muted);
@@ -144,11 +144,11 @@ onMounted(async () => {
   justify-content: center;
   font-size: 1.5rem;
 }
-.icon-blue { background: rgba(0, 46, 166, 0.2); }
-.icon-purple { background: rgba(139, 92, 246, 0.15); }
-.icon-emerald { background: rgba(52, 211, 153, 0.15); }
-.icon-amber { background: rgba(255, 231, 111, 0.15); }
-.icon-cyan { background: rgba(0, 46, 166, 0.15); color: #5b8def; }
+.icon-blue { background: rgba(51, 112, 255, 0.08); }
+.icon-purple { background: rgba(124, 58, 237, 0.08); }
+.icon-emerald { background: rgba(52, 199, 89, 0.08); }
+.icon-amber { background: rgba(255, 149, 0, 0.08); }
+.icon-cyan { background: rgba(51, 112, 255, 0.08); color: var(--accent-blue); }
 .stat-info {
   display: flex;
   flex-direction: column;
@@ -236,8 +236,8 @@ onMounted(async () => {
 .doc-tag {
   padding: 0.3rem 0.75rem;
   font-size: var(--font-size-sm);
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(51, 112, 255, 0.06);
+  border: 1px solid rgba(51, 112, 255, 0.15);
   color: var(--accent-blue);
   border-radius: var(--radius-sm);
 }

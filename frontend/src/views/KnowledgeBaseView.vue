@@ -89,16 +89,22 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 140,
+    width: 200,
     align: 'center',
     render(row) {
       return h('div', { style: 'display:flex;gap:4px;justify-content:center' }, [
         h(NButton, {
           size: 'tiny',
+          type: 'primary',
+          quaternary: true,
+          onClick: () => handleOpenFile(row),
+        }, () => '打开'),
+        h(NButton, {
+          size: 'tiny',
           type: 'info',
           quaternary: true,
           onClick: () => handlePreview(row),
-        }, () => '查看'),
+        }, () => '预览'),
         h(NButton, {
           size: 'tiny',
           type: 'error',
@@ -125,6 +131,21 @@ const handleDelete = async (fileName) => {
     await loadDocuments()
   } catch (e) {
     message.error('删除失败: ' + (e.response?.data?.detail || e.message))
+  }
+}
+
+const handleOpenFile = async (row) => {
+  if (!row.source_path) {
+    message.warning('未找到原始文件路径，尝试下载')
+    window.open(api.getDownloadUrl(row.source_path), '_blank')
+    return
+  }
+  try {
+    await api.openLocalFile(row.source_path)
+    message.success('已打开文件')
+  } catch {
+    const url = api.getDownloadUrl(row.source_path)
+    window.open(url, '_blank')
   }
 }
 
@@ -165,7 +186,7 @@ onMounted(loadDocuments)
   color: var(--text-muted);
 }
 .stats-row strong {
-  color: var(--accent-cyan);
+  color: var(--accent-blue);
 }
 .doc-table {
   padding: 0.5rem;

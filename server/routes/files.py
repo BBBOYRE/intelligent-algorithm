@@ -1,11 +1,34 @@
 import os
+import sys
 import shutil
+import subprocess
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 from config import Config
 
 router = APIRouter()
+
+
+class OpenFileRequest(BaseModel):
+    path: str
+
+
+@router.post("/files/open-local")
+async def open_local_file(req: OpenFileRequest):
+    if not req.path or not os.path.exists(req.path):
+        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        if sys.platform == "win32":
+            os.startfile(req.path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", req.path])
+        else:
+            subprocess.Popen(["xdg-open", req.path])
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cannot open file: {e}")
 
 
 @router.get("/files/avatar/{filename}")

@@ -157,11 +157,11 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center;
   font-size: 1.3rem;
 }
-.icon-blue { background: rgba(59, 130, 246, 0.15); }
-.icon-purple { background: rgba(139, 92, 246, 0.15); }
-.icon-emerald { background: rgba(16, 185, 129, 0.15); }
-.icon-cyan { background: rgba(6, 182, 212, 0.15); }
-.icon-amber { background: rgba(245, 158, 11, 0.15); }
+.icon-blue { background: rgba(51, 112, 255, 0.08); }
+.icon-purple { background: rgba(124, 58, 237, 0.08); }
+.icon-emerald { background: rgba(52, 199, 89, 0.08); }
+.icon-cyan { background: rgba(51, 112, 255, 0.08); }
+.icon-amber { background: rgba(255, 149, 0, 0.08); }
 .stat-info { display: flex; flex-direction: column; gap: 0.2rem; }
 .stat-value { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary); }
 .stat-label { font-size: var(--font-size-sm); color: var(--text-muted); }

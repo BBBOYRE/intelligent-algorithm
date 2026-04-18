@@ -384,13 +384,13 @@ watch(
 }
 
 .message-user .message-content {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(51, 112, 255, 0.06);
+  border-color: rgba(51, 112, 255, 0.12);
   border-top-right-radius: 0;
 }
 
 .message-assistant .message-content {
-  background: rgba(17, 24, 39, 0.8);
+  background: var(--bg-input);
   border-top-left-radius: 0;
 }
 
@@ -483,8 +483,8 @@ watch(
 }
 
 .upload-status.info { color: var(--accent-blue); }
-.upload-status.success { color: var(--accent-green, #22c55e); }
-.upload-status.error { color: var(--accent-red, #ef4444); }
+.upload-status.success { color: var(--accent-green); }
+.upload-status.error { color: var(--accent-red); }
 
 @media (max-width: 960px) {
   .chat-page {

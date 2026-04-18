@@ -215,6 +215,12 @@ export default {
   previewFile(filePath) {
     return http.get(`/files/preview?path=${encodeURIComponent(filePath)}`).then(r => r.data)
   },
+  openLocalFile(path) {
+    return http.post('/files/open-local', { path }).then(r => r.data)
+  },
+  writeBack(outputPath, sourcePath) {
+    return http.post('/doc-ops/write-back', { output_path: outputPath, source_path: sourcePath }).then(r => r.data)
+  },
 
   /* ---- Knowledge Graph ---- */
   getKGFiles(kbId = 'default') {

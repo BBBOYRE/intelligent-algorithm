@@ -176,6 +176,7 @@ class KnowledgeBase:
                 "format": fmt,
                 "chunk_count": len(chunks),
                 "preview": (chunks[0][:200] + "...") if chunks else "",
+                "source_path": doc.get("metadata", {}).get("source", ""),
             })
 
         return results[:top_k]
