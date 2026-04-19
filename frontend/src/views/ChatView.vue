@@ -105,6 +105,7 @@
 <script setup>
 import { computed, ref, nextTick, onMounted, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
+import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -115,6 +116,7 @@ const fileInput = ref(null)
 const uploading = ref(false)
 const uploadStatus = ref(null)
 const chatStore = useChatStore()
+const appStore = useAppStore()
 
 const messages = computed(() => chatStore.activeSession?.messages || [])
 const isTyping = computed(() => chatStore.isSessionWaiting(chatStore.activeSessionId))
@@ -170,6 +172,10 @@ const handleFileUpload = async (e) => {
   uploadStatus.value = { type: 'info', text: `正在上传 ${files.length} 个文件到知识库...` }
   try {
     const formData = new FormData()
+    formData.append('kb_id', appStore.currentKbId)
+    if (appStore.currentTeamId) {
+      formData.append('team_id', appStore.currentTeamId)
+    }
     for (const f of files) {
       formData.append('files', f)
     }

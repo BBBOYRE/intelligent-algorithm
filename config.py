@@ -7,7 +7,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 class Config:
     # ==================== 部署模式 ====================
     DEPLOYMENT_MODE = os.getenv("DEPLOYMENT_MODE", "private")  # "private" | "saas"
-    AUTH_DISABLED = os.getenv("AUTH_DISABLED", "true").lower() == "true"
+    AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
 
     # ==================== 数据库配置 ====================
     DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'data', 'db', 'app.db')}")
@@ -39,5 +39,4 @@ class Config:
 
     # ==================== RAG 参数 ====================
     RETRIEVAL_TOP_K = int(os.getenv("RETRIEVAL_TOP_K", "15"))
-    RETRIEVAL_DISTANCE_THRESHOLD = float(os.getenv("RETRIEVAL_DISTANCE_THRESHOLD", "0.6"))
     CHUNK_SIZE = 512

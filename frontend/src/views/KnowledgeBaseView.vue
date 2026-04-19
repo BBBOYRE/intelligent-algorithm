@@ -38,11 +38,13 @@
 </template>
 
 <script setup>
-import { ref, h, onMounted } from 'vue'
+import { ref, h, onMounted, watch } from 'vue'
 import { NButton, NTag, useMessage } from 'naive-ui'
+import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
 
 const message = useMessage()
+const appStore = useAppStore()
 const documents = ref([])
 const searchQuery = ref('')
 const filterFormat = ref(null)
@@ -118,15 +120,19 @@ const columns = [
 
 const loadDocuments = async () => {
   try {
-    const res = await api.listKBDocuments('default', searchQuery.value, filterFormat.value || '')
+    const res = await api.listKBDocuments(appStore.currentKbId, searchQuery.value, filterFormat.value || '')
     documents.value = res.documents || []
   } catch { /* ignore */ }
 }
 
+watch(() => appStore.currentKbId, () => {
+  loadDocuments()
+})
+
 const handleDelete = async (fileName) => {
   if (!confirm(`确定删除文档「${fileName}」？`)) return
   try {
-    await api.deleteKBDocument(fileName)
+    await api.deleteKBDocument(fileName, appStore.currentKbId)
     message.success('已删除')
     await loadDocuments()
   } catch (e) {

@@ -56,7 +56,7 @@ class KnowledgeBase:
         # ---- 新增：用于保存所有完整 parsed_doc 的空间 ----
         self.all_parsed_docs: list[dict[str, Any]] = []
         self.persist_dir_path = Path(persist_dir or Config.CHROMA_PERSIST_DIR)
-        self.docs_storage_file = self.persist_dir_path / "_parsed_docs_storage.json"
+        self.docs_storage_file = self.persist_dir_path / f"_parsed_docs_storage_{collection_name}.json"
         # 如果持久化目录中已有历史数据，自动加载以防程序重启丢失
         if self.docs_storage_file.exists():
             try:
@@ -80,7 +80,6 @@ class KnowledgeBase:
         except Exception as e:
             print(f"[SUMMARY] Failed to generate summary for {file_name}: {e}")
             return ""
-
     def add_document(self, parsed_doc: dict[str, Any]) -> None:
         chunks = parsed_doc.get("chunks", [])
         if not chunks:
@@ -102,7 +101,7 @@ class KnowledgeBase:
             json.dumps(self.all_parsed_docs, ensure_ascii=False, indent=2),
             encoding="utf-8"
         )
-    def search(self, query: str, top_k: int | None = None, distance_threshold: float | None = None) -> list[dict[str, Any]]:
+    def search(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
         if not query.strip() or self.collection.count() == 0:
             return []
         results = self.collection.query(
@@ -112,14 +111,10 @@ class KnowledgeBase:
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0] if results.get("distances") else [None] * len(documents)
-        threshold = distance_threshold if distance_threshold is not None else Config.RETRIEVAL_DISTANCE_THRESHOLD
-        hits = [
+        return [
             {"text": doc, "metadata": meta or {}, "distance": dist}
             for doc, meta, dist in zip(documents, metadatas, distances)
-            if dist is None or dist <= threshold
         ]
-        print(f"[RETRIEVAL] query='{query[:40]}...' | 候选={len(documents)} 过阈值(<= {threshold})={len(hits)}", flush=True)
-        return hits
     def get_stats(self) -> dict[str, int]:
         return {"total_chunks": self.collection.count()}
     # ---- 新增：提供一个便捷方法，获取所有文档的纯文本拼接 ----

@@ -10,11 +10,12 @@ router = APIRouter()
 _filler_cache: dict[str, object] = {}
 
 
-def _get_filler(user_id: str):
-    if user_id not in _filler_cache:
+def _get_filler(user_id: str, kb_id: str = "default", team_id: str = None):
+    cache_key = f"{user_id}_{kb_id}_{team_id}"
+    if cache_key not in _filler_cache:
         from core.table_filler import TableFiller
-        _filler_cache[user_id] = TableFiller(get_kb(user_id))
-    return _filler_cache[user_id]
+        _filler_cache[cache_key] = TableFiller(get_kb(user_id, kb_id, team_id=team_id))
+    return _filler_cache[cache_key]
 
 
 @router.post("/table/preview")
@@ -22,13 +23,15 @@ async def preview_table_fill(
     file: UploadFile = File(...),
     custom_requirements: str = Form(""),
     fill_precision: str = Form("fine"),
+    kb_id: str = Form("default"),
+    team_id: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
     if not file:
         raise HTTPException(status_code=400, detail="未上传模板文件")
     try:
         template_path = await save_uploaded_file_fastapi(file)
-        filler = _get_filler(current_user.id)
+        filler = _get_filler(current_user.id, kb_id, team_id if team_id else None)
         result = filler.preview_fill(template_path, requirements=custom_requirements, precision=fill_precision)
         return result
     except Exception as exc:
@@ -40,6 +43,8 @@ async def fill_table_endpoint(
     file: UploadFile = File(...),
     custom_requirements: str = Form(""),
     fill_precision: str = Form("fine"),
+    kb_id: str = Form("default"),
+    team_id: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
     if not file:
@@ -48,7 +53,7 @@ async def fill_table_endpoint(
         template_path = await save_uploaded_file_fastapi(file)
         filename = getattr(file, "filename", "template.bin")
         output_path = build_output_path(filename)
-        filler = _get_filler(current_user.id)
+        filler = _get_filler(current_user.id, kb_id, team_id if team_id else None)
         result = filler.fill_template(
             template_path,
             output_path,

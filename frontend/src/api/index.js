@@ -246,6 +246,20 @@ export default {
     return http.delete(`/inbox/${msgId}`).then(r => r.data)
   },
 
+  /* ---- Memos ---- */
+  listMemos() {
+    return http.get('/memos').then(r => r.data)
+  },
+  createMemo(data) {
+    return http.post('/memos', data).then(r => r.data)
+  },
+  updateMemo(memoId, data) {
+    return http.patch(`/memos/${memoId}`, data).then(r => r.data)
+  },
+  deleteMemo(memoId) {
+    return http.delete(`/memos/${memoId}`).then(r => r.data)
+  },
+
   /* ---- Profile ---- */
   updateProfile(data) {
     return http.put('/auth/profile', data).then(r => r.data)

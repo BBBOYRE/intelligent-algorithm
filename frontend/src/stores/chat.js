@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api from '../api/index.js'
+import { useAppStore } from './app'
 
 function nowIso() {
   return new Date().toISOString()
@@ -154,10 +155,11 @@ export const useChatStore = defineStore('chat', () => {
         })
         
         try {
+          const appStore = useAppStore()
           const res = await api.chatStream(
             current.text, 
             historyPayload, 
-            { session_id: session.id },
+            { session_id: session.id, kb_id: appStore.currentKbId },
             (chunk, fullReply) => {
               const msg = session.messages.find(m => m.id === assistMessageId)
               if (msg) {

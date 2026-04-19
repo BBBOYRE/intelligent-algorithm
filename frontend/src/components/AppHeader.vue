@@ -1,8 +1,16 @@
 <template>
   <header class="header">
     <div class="header-content">
-      <div class="breadcrumb animate-slide-in">
-        <span class="route-title">{{ currentRouteTitle }}</span>
+      <div class="header-left">
+        <n-button quaternary class="menu-btn" @click="appStore.toggleDrawer()">
+          <template #icon>
+            <n-icon><menu-outline /></n-icon>
+          </template>
+        </n-button>
+        <ProjectSelector />
+        <div class="breadcrumb animate-slide-in" style="margin-left: 1rem;">
+          <span class="route-title">{{ currentRouteTitle }}</span>
+        </div>
       </div>
       <div class="header-actions">
         <n-button quaternary class="inbox-btn" @click="router.push('/inbox')">
@@ -28,13 +36,16 @@
 import { computed, h, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
-import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline } from '@vicons/ionicons5'
+import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline, MenuOutline, DocumentTextOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
+import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
+import ProjectSelector from './ProjectSelector.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const appStore = useAppStore()
 const unreadCount = ref(0)
 
 const currentRouteTitle = computed(() => route.meta.title || '系统概览')
@@ -43,6 +54,7 @@ const renderIcon = (icon) => () => h(NIcon, null, { default: () => h(icon) })
 
 const userMenuOptions = [
   { label: '个人信息', key: 'profile', icon: renderIcon(SettingsOutline) },
+  { label: '备忘录管理', key: 'memos', icon: renderIcon(DocumentTextOutline) },
   { type: 'divider' },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ]
@@ -50,6 +62,8 @@ const userMenuOptions = [
 const handleUserMenu = (key) => {
   if (key === 'profile') {
     router.push('/settings')
+  } else if (key === 'memos') {
+    router.push('/memos')
   } else if (key === 'logout') {
     authStore.logout()
     router.push('/login')
@@ -86,8 +100,19 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
 }
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.menu-btn {
+  display: inline-flex;
+}
+
 
 .header-actions {
   display: flex;

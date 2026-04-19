@@ -22,6 +22,7 @@ from server.routes import (
     kg_router,
     settings_router,
     inbox_router,
+    memos_router,
 )
 from utils.file_utils import ensure_runtime_dirs
 
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(kg_router, prefix="/api", tags=["KnowledgeGraph"])
     app.include_router(settings_router, prefix="/api", tags=["Settings"])
     app.include_router(inbox_router, prefix="/api", tags=["Inbox"])
+    app.include_router(memos_router, prefix="/api", tags=["Memos"])
 
     # 审计中间件（记录写操作日志）
     from server.middleware.audit import AuditMiddleware
