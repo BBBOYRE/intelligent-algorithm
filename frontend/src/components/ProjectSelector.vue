@@ -118,7 +118,8 @@ const teamOptions = ref([])
 const fetchTeams = async () => {
   try {
     const res = await api.listTeams()
-    teamOptions.value = (res.teams || []).map(t => ({ label: t.name, value: t.id }))
+    const teamsList = Array.isArray(res) ? res : (res.teams || [])
+    teamOptions.value = teamsList.map(t => ({ label: t.name, value: t.id }))
   } catch (e) {
     console.error(e)
   }
