@@ -101,7 +101,7 @@ class KnowledgeBase:
             json.dumps(self.all_parsed_docs, ensure_ascii=False, indent=2),
             encoding="utf-8"
         )
-    def search(self, query: str, top_k: int | None = None, distance_threshold: float | None = None) -> list[dict[str, Any]]:
+    def search(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
         if not query.strip() or self.collection.count() == 0:
             return []
         results = self.collection.query(
@@ -111,14 +111,10 @@ class KnowledgeBase:
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0] if results.get("distances") else [None] * len(documents)
-        threshold = distance_threshold if distance_threshold is not None else Config.RETRIEVAL_DISTANCE_THRESHOLD
-        hits = [
+        return [
             {"text": doc, "metadata": meta or {}, "distance": dist}
             for doc, meta, dist in zip(documents, metadatas, distances)
-            if dist is None or dist <= threshold
         ]
-        print(f"[RETRIEVAL] query='{query[:40]}...' | 候选={len(documents)} 过阈值(<= {threshold})={len(hits)}", flush=True)
-        return hits
     def get_stats(self) -> dict[str, int]:
         return {"total_chunks": self.collection.count()}
     # ---- 新增：提供一个便捷方法，获取所有文档的纯文本拼接 ----

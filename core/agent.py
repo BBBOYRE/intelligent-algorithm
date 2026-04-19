@@ -102,22 +102,6 @@ class DocumentAgent:
                 break
         return "\n\n---\n\n".join(parts) if parts else ""
 
-    def _debug_log_prompt(self, prompt: ChatPromptTemplate, variables: dict[str, Any], source: str) -> None:
-        """把最终渲染后的 prompt 打印到后台，方便确认向量检索是否生效。"""
-        print("\n" + "=" * 80, flush=True)
-        print(f"[PROMPT DEBUG] 检索来源: {source} | context长度: {len(variables.get('context', ''))} 字符 "
-              f"| kb_info长度: {len(variables.get('kb_info', ''))} | history长度: {len(variables.get('history', ''))}",
-              flush=True)
-        try:
-            messages = prompt.format_messages(**variables)
-            for msg in messages:
-                role = getattr(msg, "type", msg.__class__.__name__).upper()
-                print(f"--- {role} ---", flush=True)
-                print(msg.content, flush=True)
-        except Exception as e:
-            print(f"[PROMPT DEBUG] 渲染失败: {e}", flush=True)
-        print("=" * 80 + "\n", flush=True)
-
     def chat(self, message: str, chat_history: list[dict[str, Any]] | None = None) -> str:
         # [核心修复 1] 确保 chat_history 是一个列表，方便后续追加数据
         if chat_history is None:
@@ -125,24 +109,25 @@ class DocumentAgent:
 
         from core.retriever import retrieve_context
 
-        context = retrieve_context(self.kb, message, top_k=5)
-        source = "vector" if context else ""
-        if not context:
-            context = self._get_fallback_context()
-            source = "fallback(兜底全文)" if context else "none(无知识库内容)"
+        context = retrieve_context(self.kb, message, top_k=15)
+        fallback = self._get_fallback_context()
+        if context and fallback:
+            context = context + "\n\n---\n\n" + fallback
+        elif not context:
+            context = fallback
         formatted_history = self._format_history(chat_history)
         kb_info = self._get_kb_info()
 
         if context:
-            variables = {"question": message, "context": context, "history": formatted_history, "kb_info": kb_info}
-            self._debug_log_prompt(self.rag_prompt, variables, source)
             chain = self.rag_prompt | self.llm
-            response = chain.invoke(variables)
+            response = chain.invoke(
+                {"question": message, "context": context, "history": formatted_history, "kb_info": kb_info}
+            )
         else:
-            variables = {"question": message, "history": formatted_history, "kb_info": kb_info}
-            self._debug_log_prompt(self.general_prompt, variables, source)
             chain = self.general_prompt | self.llm
-            response = chain.invoke(variables)
+            response = chain.invoke(
+                {"question": message, "history": formatted_history, "kb_info": kb_info}
+            )
 
         content = getattr(response, "content", "")
         if isinstance(content, list):
@@ -162,23 +147,24 @@ class DocumentAgent:
 
         from core.retriever import retrieve_context
 
-        context = retrieve_context(self.kb, message, top_k=5)
-        source = "vector" if context else ""
-        if not context:
-            context = self._get_fallback_context()
-            source = "fallback(兜底全文)" if context else "none(无知识库内容)"
+        context = retrieve_context(self.kb, message, top_k=15)
+        fallback = self._get_fallback_context()
+        if context and fallback:
+            context = context + "\n\n---\n\n" + fallback
+        elif not context:
+            context = fallback
         formatted_history = self._format_history(chat_history)
         kb_info = self._get_kb_info()
 
         if context:
-            variables = {"question": message, "context": context, "history": formatted_history, "kb_info": kb_info}
-            self._debug_log_prompt(self.rag_prompt, variables, source)
             chain = self.rag_prompt | self.llm
-            for chunk in chain.stream(variables):
+            for chunk in chain.stream(
+                {"question": message, "context": context, "history": formatted_history, "kb_info": kb_info}
+            ):
                 yield chunk.content
         else:
-            variables = {"question": message, "history": formatted_history, "kb_info": kb_info}
-            self._debug_log_prompt(self.general_prompt, variables, source)
             chain = self.general_prompt | self.llm
-            for chunk in chain.stream(variables):
+            for chunk in chain.stream(
+                {"question": message, "history": formatted_history, "kb_info": kb_info}
+            ):
                 yield chunk.content

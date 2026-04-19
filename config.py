@@ -39,5 +39,4 @@ class Config:
 
     # ==================== RAG 参数 ====================
     RETRIEVAL_TOP_K = int(os.getenv("RETRIEVAL_TOP_K", "15"))
-    RETRIEVAL_DISTANCE_THRESHOLD = float(os.getenv("RETRIEVAL_DISTANCE_THRESHOLD", "0.6"))
     CHUNK_SIZE = 512
