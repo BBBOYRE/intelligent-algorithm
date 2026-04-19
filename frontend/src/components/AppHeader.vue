@@ -36,7 +36,7 @@
 import { computed, h, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
-import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline, MenuOutline } from '@vicons/ionicons5'
+import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline, MenuOutline, DocumentTextOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
@@ -54,6 +54,7 @@ const renderIcon = (icon) => () => h(NIcon, null, { default: () => h(icon) })
 
 const userMenuOptions = [
   { label: '个人信息', key: 'profile', icon: renderIcon(SettingsOutline) },
+  { label: '备忘录管理', key: 'memos', icon: renderIcon(DocumentTextOutline) },
   { type: 'divider' },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ]
@@ -61,6 +62,8 @@ const userMenuOptions = [
 const handleUserMenu = (key) => {
   if (key === 'profile') {
     router.push('/settings')
+  } else if (key === 'memos') {
+    router.push('/memos')
   } else if (key === 'logout') {
     authStore.logout()
     router.push('/login')

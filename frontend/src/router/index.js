@@ -85,6 +85,12 @@ const routes = [
         component: () => import('../views/InboxView.vue'),
         meta: { title: '收件箱', icon: '📬' },
       },
+      {
+        path: 'memos',
+        name: 'memos',
+        component: () => import('../views/MemosView.vue'),
+        meta: { title: '备忘录管理', icon: '📝' },
+      },
     ],
   },
 ]

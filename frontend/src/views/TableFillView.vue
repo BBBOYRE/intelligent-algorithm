@@ -36,32 +36,33 @@
             @change="onFileSelected"
           />
         </div>
-
+        
+        <!-- 新增：填写精度二选一模块 -->
         <div class="precision-section">
           <h3 class="panel-title">2. 填写精度</h3>
           <div class="toggle-group">
-            <button
-              class="toggle-btn"
+            <button 
+              class="toggle-btn" 
               :class="{ active: fillPrecision === 'fine' }"
               @click="fillPrecision = 'fine'"
               :disabled="isProcessing"
             >
-              精细
+              粗略
             </button>
-            <button
-              class="toggle-btn"
+            <button 
+              class="toggle-btn" 
               :class="{ active: fillPrecision === 'coarse' }"
               @click="fillPrecision = 'coarse'"
               :disabled="isProcessing"
             >
-              粗略
+              精细
             </button>
           </div>
         </div>
 
         <div class="custom-requirements-section">
           <h3 class="panel-title">3. 特殊需求 (选填)</h3>
-          <textarea
+          <textarea 
             v-model="customRequirements"
             class="requirement-input"
             placeholder="请输入对本次填表的特殊要求，如：保留原模板样式、某列需留空等..."
@@ -118,7 +119,6 @@
             <p v-else class="pulsing">AI 代理正在努力填表中...</p>
           </div>
         </div>
-
         <!-- 成功 -->
         <div class="result-box result-success animate-slide-in" v-else-if="result.status === 'success'">
           <div class="success-icon">✅</div>
@@ -131,7 +131,6 @@
             </button>
           </div>
         </div>
-
         <!-- 失败 -->
         <div class="result-box result-error animate-slide-in" v-else>
           <div class="error-icon">❌</div>
@@ -477,6 +476,78 @@ const confirmFill = async () => {
 .requirement-input::placeholder {
   color: var(--text-muted);
 }
+<<<<<<< HEAD
+=======
+
+/* 新增：二选一按钮组样式 */
+.precision-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.toggle-group {
+  display: flex;
+  gap: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+.toggle-btn {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-md, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  outline: none;
+}
+.toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border-subtle);
+}
+.toggle-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.toggle-btn.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+  font-weight: 600;
+}
+.toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.custom-requirements-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.requirement-input {
+  width: 100%;
+  resize: vertical;
+  padding: 0.75rem 1rem;
+  font-size: var(--font-size-md, 14px);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  outline: none;
+  transition: border-color var(--transition-fast, 0.2s);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.requirement-input:focus {
+  border-color: var(--accent-blue);
+}
+.requirement-input::placeholder {
+  color: var(--text-muted);
+}
+>>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
 .action-box {
   margin-top: auto;
 }
@@ -522,6 +593,7 @@ const confirmFill = async () => {
   font-size: var(--font-size-md);
   line-height: 1.6;
 }
+<<<<<<< HEAD
 .result-time {
   color: var(--text-muted);
   font-size: var(--font-size-sm);
@@ -530,6 +602,8 @@ const confirmFill = async () => {
   color: var(--accent-blue);
   font-size: var(--font-size-lg);
 }
+=======
+>>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
 .highlight {
   font-size: var(--font-size-xl);
   color: var(--accent-blue);

@@ -68,25 +68,112 @@
       </router-link>
     </div>
 
-    <div class="docs-section" v-if="kbStats.documents && kbStats.documents.length > 0">
-      <h3 class="section-title">已入库文档</h3>
-      <div class="doc-tags">
-        <span class="doc-tag" v-for="doc in kbStats.documents" :key="doc.file_name">
-          {{ doc.file_name }}
-        </span>
+    <div class="dashboard-widgets">
+      <!-- Memos Section -->
+      <div class="memos-section" v-if="sortedMemos.length > 0">
+        <div class="section-header">
+          <h3 class="section-title">我的备忘录</h3>
+          <router-link to="/memos" class="view-all">查看全部 →</router-link>
+        </div>
+        <div class="memos-list">
+          <div v-for="memo in sortedMemos.slice(0, 5)" :key="memo.id" class="dashboard-memo-card card-static">
+            <div class="memo-title-row">
+              <div class="memo-title">
+                <span v-if="memo.is_starred" class="star-icon">⭐</span>
+                {{ memo.title || '无标题' }}
+              </div>
+              <div class="memo-date" :class="{ 'overdue': isOverdue(memo.due_date), 'close': isClose(memo.due_date) }" v-if="memo.due_date">
+                {{ formatRelativeDate(memo.due_date) }}
+              </div>
+            </div>
+            <div class="memo-content-preview">{{ truncate(memo.content, 60) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Docs Section -->
+      <div class="docs-section" v-if="kbStats.documents && kbStats.documents.length > 0">
+        <h3 class="section-title">已入库文档</h3>
+        <div class="doc-tags">
+          <span class="doc-tag" v-for="doc in kbStats.documents" :key="doc.file_name">
+            {{ doc.file_name }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import api from '../api/index.js'
 
 const authStore = useAuthStore()
 const kbStats = ref({ total_chunks: 0, documents: [] })
 const knowledgeBases = ref([])
+const memos = ref([])
+
+// 优先级：收藏+时间临近>收藏>时间临近>无关注+无时间临近
+const sortedMemos = computed(() => {
+  return [...memos.value].sort((a, b) => {
+    const aClose = isClose(a.due_date) || isOverdue(a.due_date)
+    const bClose = isClose(b.due_date) || isOverdue(b.due_date)
+
+    const getPriority = (m, close) => {
+      if (m.is_starred && close) return 1
+      if (m.is_starred && !close) return 2
+      if (!m.is_starred && close) return 3
+      return 4
+    }
+
+    const pA = getPriority(a, aClose)
+    const pB = getPriority(b, bClose)
+
+    if (pA !== pB) {
+      return pA - pB
+    }
+
+    // 同优先级下，有截至日期优先按截止日期升序，无截止日期按更新时间倒序
+    if (a.due_date && b.due_date) {
+      return new Date(a.due_date) - new Date(b.due_date)
+    }
+    if (a.due_date) return -1
+    if (b.due_date) return 1
+    return new Date(b.updated_at) - new Date(a.updated_at)
+  })
+})
+
+const isOverdue = (dateStr) => {
+  if (!dateStr) return false
+  return new Date(dateStr) < new Date()
+}
+
+const isClose = (dateStr) => {
+  if (!dateStr) return false
+  const diffTime = new Date(dateStr) - new Date()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays >= 0 && diffDays <= 3
+}
+
+const formatRelativeDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffTime = date - now
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 0) return '已过期'
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '明天'
+  if (diffDays === 2) return '后天'
+  return `${diffDays}天后`
+}
+
+const truncate = (text, len) => {
+  if (!text) return ''
+  return text.length > len ? text.substring(0, len) + '...' : text
+}
 
 onMounted(async () => {
   try {
@@ -95,6 +182,9 @@ onMounted(async () => {
   try {
     const res = await api.listKBs()
     knowledgeBases.value = res.knowledge_bases || []
+  } catch { /* ignore */ }
+  try {
+    memos.value = await api.listMemos()
   } catch { /* ignore */ }
 })
 </script>
@@ -228,6 +318,94 @@ onMounted(async () => {
   margin-bottom: 1rem;
   color: var(--text-primary);
 }
+
+.dashboard-widgets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-widgets {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Memos specific styles */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+.view-all {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.view-all:hover {
+  text-decoration: underline;
+}
+
+.memos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-memo-card {
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.memo-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.memo-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.star-icon {
+  font-size: 0.9rem;
+}
+
+.memo-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.memo-date.overdue {
+  color: var(--accent-red);
+  font-weight: 600;
+}
+
+.memo-date.close {
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+.memo-content-preview {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
 .doc-tags {
   display: flex;
   flex-wrap: wrap;

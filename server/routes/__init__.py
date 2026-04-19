@@ -15,6 +15,7 @@ from server.routes.team_activity import router as team_activity_router
 from server.routes.knowledge_graph import router as kg_router
 from server.routes.settings import router as settings_router
 from server.routes.inbox import router as inbox_router
+from server.routes.memos import router as memos_router
 
 __all__ = [
     "documents_router",
@@ -34,4 +35,5 @@ __all__ = [
     "kg_router",
     "settings_router",
     "inbox_router",
+    "memos_router",
 ]

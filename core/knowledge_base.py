@@ -80,7 +80,6 @@ class KnowledgeBase:
         except Exception as e:
             print(f"[SUMMARY] Failed to generate summary for {file_name}: {e}")
             return ""
-
     def add_document(self, parsed_doc: dict[str, Any]) -> None:
         chunks = parsed_doc.get("chunks", [])
         if not chunks:
