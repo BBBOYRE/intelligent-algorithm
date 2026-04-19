@@ -1,14 +1,19 @@
 <template>
-  <aside class="sidebar" :class="{ 'collapsed': store.sidebarCollapsed }">
+  <aside class="sidebar" :class="{ 'collapsed': store.sidebarCollapsed, 'drawer-open': store.drawerVisible }">
     <div class="sidebar-header">
       <div class="logo">
         <span class="logo-icon">📄</span>
         <span class="logo-text" v-show="!store.sidebarCollapsed">文档智能系统</span>
       </div>
-      <button class="toggle-btn" @click="store.toggleSidebar()" title="Toggle Sidebar">
-        <svg v-if="!store.sidebarCollapsed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </button>
+      <div class="header-actions">
+        <button class="toggle-btn desktop-only" @click="store.toggleSidebar()" title="Toggle Sidebar">
+          <svg v-if="!store.sidebarCollapsed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button class="toggle-btn mobile-only" @click="store.toggleDrawer()" title="Close Drawer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
     </div>
 
     <nav class="sidebar-nav stagger-children">
@@ -85,8 +90,16 @@ onMounted(() => {
   top: 0;
   left: 0;
   height: 100vh;
-  transition: width var(--transition-normal);
+  transition: width var(--transition-normal), transform var(--transition-normal);
   z-index: 100;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mobile-only {
+  display: none;
 }
 .sidebar.collapsed {
   width: 80px;
@@ -246,5 +259,20 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sidebar {
+  transform: translateX(-100%);
+  width: var(--sidebar-width) !important; /* Ignore collapsed state in drawer mode */
+}
+.sidebar.drawer-open {
+  transform: translateX(0);
+  box-shadow: var(--shadow-lg);
+}
+.desktop-only {
+  display: none;
+}
+.mobile-only {
+  display: flex;
 }
 </style>

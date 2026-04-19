@@ -6,6 +6,7 @@ export const useAppStore = defineStore('app', () => {
   const kbStats = ref({ total_chunks: 0 })
   const isLoading = ref(false)
   const sidebarCollapsed = ref(false)
+  const drawerVisible = ref(false)
 
   async function refreshKBStats() {
     try {
@@ -20,5 +21,9 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
 
-  return { kbStats, isLoading, sidebarCollapsed, refreshKBStats, toggleSidebar }
+  function toggleDrawer() {
+    drawerVisible.value = !drawerVisible.value
+  }
+
+  return { kbStats, isLoading, sidebarCollapsed, drawerVisible, refreshKBStats, toggleSidebar, toggleDrawer }
 })
