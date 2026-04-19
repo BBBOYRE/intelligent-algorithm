@@ -1,5 +1,4 @@
 import os
-<<<<<<< HEAD
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from utils.file_utils import build_output_path, save_uploaded_file_fastapi
 from server.auth.security import get_current_user
@@ -48,25 +47,12 @@ async def fill_table_endpoint(
     team_id: str = Form(""),
     current_user: User = Depends(get_current_user),
 ):
-=======
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
-from utils.file_utils import build_output_path, save_uploaded_file_fastapi
-router = APIRouter()
-@router.post("/table/fill")
-async def fill_table_endpoint( 
-    file: UploadFile = File(...), 
-    custom_requirements: str = Form(""),  # 接收前端传来的特殊需求，默认为空字符串
-    fill_precision: str = Form("fine")    # 新增：接收前端传来的填写精度选项，默认为 fine（精细）
-    ):
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
     if not file:
         raise HTTPException(status_code=400, detail="未上传模板文件")
     try:
         template_path = await save_uploaded_file_fastapi(file)
         filename = getattr(file, "filename", "template.bin")
         output_path = build_output_path(filename)
-<<<<<<< HEAD
         filler = _get_filler(current_user.id, kb_id, team_id if team_id else None)
         result = filler.fill_template(
             template_path,
@@ -77,20 +63,6 @@ async def fill_table_endpoint(
         if result.get("status") == "success" and os.path.exists(result["output_path"]):
             from server.services.webhook_dispatcher import dispatch_event
             await dispatch_event(current_user.id, "table.filled", {"filled_cells": result.get("filled_cells", 0)})
-=======
-        from core.knowledge_base import KnowledgeBase
-        from core.table_filler import TableFiller
-        filler = TableFiller(KnowledgeBase())
-        # 将 custom_requirements 和 fill_precision 传递给填表逻辑
-        result = filler.fill_template(
-            template_path, 
-            output_path, 
-            requirements=custom_requirements,
-            precision=fill_precision
-        )
-        # 恢复成返回 JSON，让前端能够正常解析并展示成功动画
-        if result.get("status") == "success" and os.path.exists(result["output_path"]):
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
             return result
         else:
             raise HTTPException(status_code=500, detail="填表失败或未能生成有效文件")
