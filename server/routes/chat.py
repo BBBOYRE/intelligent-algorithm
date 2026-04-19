@@ -119,7 +119,6 @@ async def chat_endpoint(
         print(f"[CHAT ERROR] Session creation failed: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"会话创建失败: {exc}")
 
-    # Insert user message
     user_msg = ChatMessage(
         id=f"msg_{uuid.uuid4().hex[:8]}",
         session_id=session_id,
@@ -127,6 +126,7 @@ async def chat_endpoint(
         content=req.message
     )
     db.add(user_msg)
+    db.commit()
 
     def generate_response():
         try:

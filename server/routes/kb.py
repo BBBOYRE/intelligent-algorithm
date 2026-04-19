@@ -91,6 +91,23 @@ async def list_knowledge_bases(
         KnowledgeBaseModel.team_id == None,
     ).all()
 
+    # Create a default personal KB if none exists
+    if not personal:
+        kb_id = str(uuid.uuid4())
+        default_kb = KnowledgeBaseModel(
+            id=kb_id,
+            user_id=current_user.id,
+            name="我的项目",
+            collection_name=f"kb_{current_user.id}_{kb_id}",
+            description="默认个人项目",
+            visibility="all",
+            created_by=current_user.id,
+        )
+        db.add(default_kb)
+        db.commit()
+        db.refresh(default_kb)
+        personal = [default_kb]
+
     # Team KBs: find all teams user belongs to
     memberships = db.query(TeamMember).filter(TeamMember.user_id == current_user.id).all()
     team_ids = [m.team_id for m in memberships]

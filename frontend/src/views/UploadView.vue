@@ -6,12 +6,6 @@
     </div>
 
     <div class="upload-section card-static">
-      <!-- 知识库选择器 -->
-      <div class="kb-selector-bar" v-if="kbOptions.length > 1">
-        <span style="color:var(--text-secondary);font-size:var(--font-size-sm)">上传到：</span>
-        <n-select v-model:value="selectedKBId" :options="kbOptions" style="width:280px" size="small" />
-      </div>
-
       <!-- 知识库状态栏 -->
       <div class="kb-status-bar">
         <div class="kb-info">
@@ -84,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
@@ -99,35 +93,24 @@ const uploadStatus = ref('')
 const toast = useToast()
 const store = useAppStore()
 const kbStats = ref({ total_chunks: 0, documents: [] })
-const selectedKBId = ref('default')
-const kbOptions = ref([{ label: '个人默认知识库', value: 'default' }])
-const selectedKBTeamId = ref('')
-
-const loadKBOptions = async () => {
-  try {
-    const res = await api.listKBs()
-    const opts = [{ label: '个人默认知识库', value: 'default' }]
-    for (const kb of (res.knowledge_bases || [])) {
-      const prefix = kb.team_name ? `[${kb.team_name}] ` : ''
-      opts.push({ label: prefix + kb.name, value: kb.id, teamId: kb.team_id || '' })
-    }
-    kbOptions.value = opts
-  } catch {}
-}
 
 const loadKBStats = async () => {
   try {
-    kbStats.value = await api.getKBStats(selectedKBId.value)
+    kbStats.value = await api.getKBStats(store.currentKbId)
   } catch (e) {
     kbStats.value = { total_chunks: 0, documents: [] }
   }
 }
 
+watch(() => store.currentKbId, () => {
+  loadKBStats()
+})
+
 const handleClearKB = async () => {
   if (!confirm('确定要清空知识库吗？所有已入库的文档数据将被删除。')) return
   isClearing.value = true
   try {
-    await api.clearKB()
+    await api.clearKB(store.currentKbId)
     toast.success('知识库已清空')
     await loadKBStats()
     await store.refreshKBStats()
@@ -140,7 +123,6 @@ const handleClearKB = async () => {
 
 onMounted(() => {
   loadKBStats()
-  loadKBOptions()
 })
 
 const triggerFileInput = () => {
@@ -206,14 +188,13 @@ const uploadFiles = async () => {
   uploadProgress.value = 0
   uploadStatus.value = `准备上传 ${files.value.length} 个文件...`
 
-  try {
-    const formData = new FormData()
-    files.value.forEach(file => {
-      formData.append('files', file)
-    })
-    formData.append('kb_id', selectedKBId.value)
-    const opt = kbOptions.value.find(o => o.value === selectedKBId.value)
-    if (opt?.teamId) formData.append('team_id', opt.teamId)
+    try {
+      const formData = new FormData()
+      files.value.forEach(file => {
+        formData.append('files', file)
+      })
+      formData.append('kb_id', store.currentKbId)
+      if (store.currentTeamId) formData.append('team_id', store.currentTeamId)
 
     // 5个以上文件用异步模式
     if (files.value.length > 5) {

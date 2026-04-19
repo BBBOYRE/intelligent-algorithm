@@ -49,6 +49,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useMessage } from 'naive-ui'
+import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
 
 const message = useMessage()
@@ -68,9 +69,11 @@ const typeColor = { person: 'info', org: 'warning', location: 'success', date: '
 const typeLabel = { person: '人物', org: '组织', location: '地点', date: '日期', event: '事件', concept: '概念' }
 const typeNodeColor = { person: '#3b82f6', org: '#f59e0b', location: '#10b981', date: '#94a3b8', event: '#f43f5e', concept: '#8b5cf6' }
 
+const appStore = useAppStore()
+
 const loadFiles = async () => {
   try {
-    const files = await api.getKGFiles()
+    const files = await api.getKGFiles(appStore.currentKbId)
     fileOptions.value = files.map(f => ({ label: f.name, value: f.name }))
   } catch {}
 }
@@ -107,7 +110,7 @@ const startGenerate = async () => {
   selectedNode.value = null
   try {
     const names = selectedFiles.value.length > 0 ? selectedFiles.value : null
-    const { task_id } = await api.generateKG(names)
+    const { task_id } = await api.generateKG(names, appStore.currentKbId)
     pollForResult(task_id)
   } catch (e) {
     loading.value = false
@@ -178,6 +181,14 @@ onMounted(async () => {
   await loadFiles()
   await loadCachedGraphState()
 })
+
+watch(() => appStore.currentKbId, () => {
+  loadFiles()
+  selectedFiles.value = []
+  graphData.value = null
+  if (network) { network.destroy(); network = null }
+})
+
 onUnmounted(() => {
   if (network) network.destroy()
   if (pollTimer) clearInterval(pollTimer)

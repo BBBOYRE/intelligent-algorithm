@@ -147,6 +147,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useToast } from '../composables/useToast'
+import { useAppStore } from '../stores/app'
 import api from '../api/index.js'
 
 const fileInput = ref(null)
@@ -159,6 +160,7 @@ const customRequirements = ref('')
 const fillPrecision = ref('fine')
 const elapsedTime = ref(null)
 const previewData = ref(null)
+const appStore = useAppStore()
 
 const triggerFileInput = () => {
   if (!isProcessing.value) fileInput.value.click()
@@ -280,6 +282,10 @@ const startPreview = async () => {
     formData.append('file', templateFile.value)
     formData.append('custom_requirements', customRequirements.value || '')
     formData.append('fill_precision', fillPrecision.value)
+    formData.append('kb_id', appStore.currentKbId)
+    if (appStore.currentTeamId) {
+      formData.append('team_id', appStore.currentTeamId)
+    }
 
     const res = await api.previewTemplate(formData)
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
@@ -308,6 +314,10 @@ const confirmFill = async () => {
     formData.append('file', templateFile.value)
     formData.append('custom_requirements', customRequirements.value || '')
     formData.append('fill_precision', fillPrecision.value)
+    formData.append('kb_id', appStore.currentKbId)
+    if (appStore.currentTeamId) {
+      formData.append('team_id', appStore.currentTeamId)
+    }
 
     const res = await api.fillTemplate(formData)
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)

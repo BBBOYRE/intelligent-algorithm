@@ -56,7 +56,7 @@ class KnowledgeBase:
         # ---- 新增：用于保存所有完整 parsed_doc 的空间 ----
         self.all_parsed_docs: list[dict[str, Any]] = []
         self.persist_dir_path = Path(persist_dir or Config.CHROMA_PERSIST_DIR)
-        self.docs_storage_file = self.persist_dir_path / "_parsed_docs_storage.json"
+        self.docs_storage_file = self.persist_dir_path / f"_parsed_docs_storage_{collection_name}.json"
         # 如果持久化目录中已有历史数据，自动加载以防程序重启丢失
         if self.docs_storage_file.exists():
             try:
