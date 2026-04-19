@@ -127,6 +127,7 @@ async def chat_endpoint(
         content=req.message
     )
     db.add(user_msg)
+    db.commit()
 
     def generate_response():
         try:
