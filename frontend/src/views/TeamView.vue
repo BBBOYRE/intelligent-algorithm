@@ -121,16 +121,17 @@
             <div class="kb-row-info" style="flex:1">
               <span class="kb-row-name">{{ t.title }}</span>
               <span class="kb-row-meta">
-                负责人: {{ t.assignee_name }} · 指派人: {{ t.assigner_name }}
+                负责人: {{ t.assignee_name }} · 指派人: {{ t.assigner_name }} · 来自: {{ t.team_name || '未知' }}
                 <span v-if="t.deadline"> · 截止: {{ t.deadline?.replace('T',' ').slice(0,10) }}</span>
               </span>
+              <span class="kb-row-meta" v-if="t.status === 'completed' && t.completion_note" style="color:var(--accent-green)">完成说明: {{ t.completion_note }}</span>
             </div>
             <div class="kb-row-actions">
               <n-tag :type="t.status === 'completed' ? 'success' : t.status === 'in_progress' ? 'warning' : 'default'" size="small">
                 {{ t.status === 'completed' ? '已完成' : t.status === 'in_progress' ? '进行中' : '待处理' }}
               </n-tag>
               <n-button v-if="t.status === 'pending'" size="tiny" @click="updateTaskStatus(t.id, 'in_progress')">开始</n-button>
-              <n-button v-if="t.status === 'in_progress'" size="tiny" type="success" @click="updateTaskStatus(t.id, 'completed')">完成</n-button>
+              <n-button v-if="t.status === 'in_progress'" size="tiny" type="success" @click="openCompleteModal(t)">完成</n-button>
               <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="error" quaternary @click="deleteTask(t.id)">删除</n-button>
             </div>
           </div>
@@ -293,6 +294,27 @@
         </div>
       </template>
     </n-modal>
+
+    <!-- 完成任务弹窗 -->
+    <n-modal v-model:show="showCompleteModal" preset="card" title="确认完成任务" style="width:480px">
+      <div v-if="completingTask" style="margin-bottom:1rem">
+        <strong>{{ completingTask.title }}</strong>
+      </div>
+      <n-form label-placement="left" label-width="80">
+        <n-form-item label="完成说明">
+          <n-input v-model:value="completeNote" type="textarea" :rows="3" placeholder="描述完成情况（可选）" />
+        </n-form-item>
+        <n-form-item label="附件">
+          <input type="file" ref="taskFileInput" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <n-button @click="showCompleteModal = false">取消</n-button>
+          <n-button type="primary" @click="doCompleteTask">确认完成</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -330,6 +352,11 @@ const taskForm = ref({ title: '', description: '', assignee_id: '' })
 const taskDeadlineTs = ref(null)
 const showEditKBModal = ref(false)
 const editKBForm = ref({ id: '', name: '', description: '', visibility: 'all' })
+
+const showCompleteModal = ref(false)
+const completingTask = ref(null)
+const completeNote = ref('')
+const taskFileInput = ref(null)
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -579,6 +606,27 @@ const deleteTask = async (taskId) => {
     await api.deleteTeamTask(currentTeamId.value, taskId)
     await loadTasks()
   } catch (e) { message.error(e?.response?.data?.detail || '删除失败') }
+}
+
+const openCompleteModal = (task) => {
+  completingTask.value = task
+  completeNote.value = ''
+  showCompleteModal.value = true
+}
+
+const doCompleteTask = async () => {
+  if (!completingTask.value) return
+  const formData = new FormData()
+  formData.append('completion_note', completeNote.value)
+  if (taskFileInput.value?.files?.[0]) {
+    formData.append('file', taskFileInput.value.files[0])
+  }
+  try {
+    await api.completeTeamTask(currentTeamId.value, completingTask.value.id, formData)
+    message.success('任务已完成')
+    showCompleteModal.value = false
+    await loadTasks()
+  } catch (e) { message.error(e?.response?.data?.detail || '操作失败') }
 }
 
 const openEditKB = (kb) => {

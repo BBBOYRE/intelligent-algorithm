@@ -14,6 +14,8 @@ class TeamTask(Base):
     description: Mapped[str] = mapped_column(Text, nullable=True, default="")
     assignee_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     assigner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending / in_progress / completed
+    status: Mapped[str] = mapped_column(String(20), default="pending")
     deadline: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completion_note: Mapped[str] = mapped_column(Text, nullable=True, default="")
+    attachment_path: Mapped[str] = mapped_column(String(500), nullable=True, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

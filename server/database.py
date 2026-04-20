@@ -52,3 +52,10 @@ def _migrate_user_columns():
         with engine.begin() as conn:
             if "project_id" not in cols:
                 conn.execute(sqlalchemy.text("ALTER TABLE knowledge_bases ADD COLUMN project_id VARCHAR(36)"))
+    if "team_tasks" in tables:
+        cols = [c["name"] for c in insp.get_columns("team_tasks")]
+        with engine.begin() as conn:
+            if "completion_note" not in cols:
+                conn.execute(sqlalchemy.text("ALTER TABLE team_tasks ADD COLUMN completion_note TEXT DEFAULT ''"))
+            if "attachment_path" not in cols:
+                conn.execute(sqlalchemy.text("ALTER TABLE team_tasks ADD COLUMN attachment_path VARCHAR(500) DEFAULT ''"))

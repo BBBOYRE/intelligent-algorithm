@@ -2,7 +2,7 @@
   <div class="app-container">
     <div class="sidebar-overlay" v-if="appStore.drawerVisible" @click="appStore.toggleDrawer()"></div>
     <AppSidebar />
-    <main class="main-content">
+    <main class="main-content" :style="{ marginLeft: appStore.sidebarCollapsed ? '0' : 'var(--sidebar-width)' }">
       <AppHeader />
       <div class="page-content">
         <router-view />

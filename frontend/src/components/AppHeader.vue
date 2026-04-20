@@ -2,7 +2,7 @@
   <header class="header">
     <div class="header-content">
       <div class="header-left">
-        <n-button quaternary class="menu-btn" @click="appStore.toggleDrawer()">
+        <n-button quaternary class="menu-btn" @click="toggleSidebar">
           <template #icon>
             <n-icon><menu-outline /></n-icon>
           </template>
@@ -49,6 +49,14 @@ const appStore = useAppStore()
 const unreadCount = ref(0)
 
 const currentRouteTitle = computed(() => route.meta.title || '系统概览')
+
+const toggleSidebar = () => {
+  if (window.innerWidth <= 768) {
+    appStore.toggleDrawer()
+  } else {
+    appStore.toggleSidebar()
+  }
+}
 
 const renderIcon = (icon) => () => h(NIcon, null, { default: () => h(icon) })
 

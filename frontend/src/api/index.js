@@ -214,6 +214,11 @@ export default {
   updateTeamTaskStatus(teamId, taskId, status) {
     return http.patch(`/teams/${teamId}/tasks/${taskId}`, { status }).then(r => r.data)
   },
+  completeTeamTask(teamId, taskId, formData) {
+    return http.post(`/teams/${teamId}/tasks/${taskId}/complete`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
   deleteTeamTask(teamId, taskId) {
     return http.delete(`/teams/${teamId}/tasks/${taskId}`).then(r => r.data)
   },
