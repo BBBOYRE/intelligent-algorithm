@@ -2,8 +2,9 @@ import os
 import sys
 import shutil
 import subprocess
+import uuid
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from config import Config
@@ -136,3 +137,16 @@ def save_file_as(path: str = Query(...)):
     import shutil
     shutil.copyfile(src, target)
     return {"status": "success", "saved_to": str(target)}
+
+
+@router.post("/files/save-temp")
+async def save_temp_file(file: UploadFile = File(...)):
+    temp_dir = os.path.join(Config.OUTPUT_DIR, "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    ext = os.path.splitext(file.filename or "")[1] or ".bin"
+    fname = f"{uuid.uuid4().hex[:8]}_{file.filename or 'file'}"
+    fpath = os.path.join(temp_dir, fname)
+    content = await file.read()
+    with open(fpath, "wb") as f:
+        f.write(content)
+    return {"path": fpath}

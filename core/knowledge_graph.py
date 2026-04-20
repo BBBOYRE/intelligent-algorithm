@@ -16,7 +16,6 @@ class KnowledgeGraphBuilder:
     def build_graph(self, file_names: list[str] | None = None) -> dict:
         all_text = ""
 
-        # 从 parsed_docs 取指定文件（或全部）的 markdown
         for doc in self.kb.all_parsed_docs:
             name = doc.get("file_name", "")
             if file_names and name not in file_names:
@@ -24,25 +23,27 @@ class KnowledgeGraphBuilder:
             md = doc.get("markdown", "")
             if md:
                 all_text += f"\n\n--- {name} ---\n\n" + md
+            elif doc.get("text"):
+                all_text += f"\n\n--- {name} ---\n\n" + doc["text"]
+            elif doc.get("raw_text"):
+                all_text += f"\n\n--- {name} ---\n\n" + doc["raw_text"]
             elif doc.get("chunks"):
-                all_text += f"\n\n--- {name} ---\n\n" + "\n".join(doc["chunks"])
+                all_text += f"\n\n--- {name} ---\n\n" + "\n".join(doc["chunks"][:20])
 
-        # fallback: 从 ChromaDB 取
         if not all_text.strip():
             try:
                 count = self.kb.collection.count()
                 if count > 0:
-                    kwargs = {"limit": min(count, 200), "include": ["documents", "metadatas"]}
-                    result = self.kb.collection.get(**kwargs)
+                    result = self.kb.collection.get(include=["documents", "metadatas"])
                     docs = result.get("documents", [])
                     metas = result.get("metadatas", [])
-                    for i, text in enumerate(docs):
+                    for i, text in enumerate(docs[:200]):
                         src = metas[i].get("source", "") if i < len(metas) else ""
                         if file_names and src not in file_names:
                             continue
                         all_text += "\n\n" + text
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[KG] ChromaDB fallback error: {e}")
 
         if not all_text.strip():
             return {"nodes": [], "edges": []}

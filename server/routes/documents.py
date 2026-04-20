@@ -75,6 +75,6 @@ async def upload_documents_async(
         raise HTTPException(status_code=500, detail="文件保存失败")
 
     task = task_manager.create_task("document_batch", total=len(file_paths))
-    asyncio.create_task(process_document_batch(task, file_paths, current_user.id))
+    asyncio.create_task(process_document_batch(task, file_paths, current_user.id, kb_id=kb_id, team_id=team_id if team_id else None))
 
     return {"status": "accepted", "task_id": task.id, "total": len(file_paths)}

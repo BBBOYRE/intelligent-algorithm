@@ -159,7 +159,7 @@ export const useChatStore = defineStore('chat', () => {
           const res = await api.chatStream(
             current.text, 
             historyPayload, 
-            { session_id: session.id, kb_id: appStore.currentKbId },
+            { session_id: session.id, kb_id: appStore.currentKbId, team_id: appStore.currentTeamId || '' },
             (chunk, fullReply) => {
               const msg = session.messages.find(m => m.id === assistMessageId)
               if (msg) {

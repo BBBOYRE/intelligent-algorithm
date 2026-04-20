@@ -1,7 +1,8 @@
 import os
 import sys
 import shutil
-from fastapi import UploadFile
+import uuid
+from fastapi import UploadFile, HTTPException
 
 def get_base_dir() -> str:
     """极其关键：获取真实的运行根目录，完美兼容 PyInstaller 与开发环境"""
@@ -24,18 +25,30 @@ def ensure_runtime_dirs():
     for d in [DATA_DIR, UPLOAD_DIR, OUTPUT_DIR, DB_DIR]:
         os.makedirs(d, exist_ok=True)
 
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
+
 async def save_uploaded_file_fastapi(file: UploadFile) -> str:
-    """保存前端上传的文件，保证路径绝对安全"""
+    """保存前端上传的文件，支持大文件流式写入，自动处理重名"""
     ensure_runtime_dirs()
-    
-    # 获取安全的文件名
+
     filename = getattr(file, "filename", "temp_file.bin")
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    
-    # 写入文件
+    name, ext = os.path.splitext(filename)
+    safe_name = f"{name}_{uuid.uuid4().hex[:6]}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, safe_name)
+
+    total_size = 0
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
+        while True:
+            chunk = await file.read(1024 * 1024)  # 1MB chunks
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE:
+                buffer.close()
+                os.remove(file_path)
+                raise HTTPException(status_code=413, detail=f"文件过大，最大支持 {MAX_FILE_SIZE // (1024*1024)}MB")
+            buffer.write(chunk)
+
     return file_path
 
 def build_output_path(filename: str) -> str:

@@ -85,15 +85,22 @@ class DocumentAgent:
                 lines.append(f"{display_role}: {content}")
         return "\n".join(lines) if lines else "无"
 
-    def _get_fallback_context(self, max_chars: int = 8000) -> str:
-        """当语义检索无结果时，从知识库中尽可能多地拉取文档内容"""
+    def _get_fallback_context(self, max_chars: int = 20000) -> str:
+        """从知识库中尽可能多地拉取文档内容作为上下文"""
         parts = []
         total = 0
         for doc in self.kb.all_parsed_docs:
             fname = doc.get("file_name", "unknown")
+            text = doc.get("text") or doc.get("raw_text") or ""
+            if text:
+                snippet = text[:2000]
+                if total + len(snippet) <= max_chars:
+                    parts.append(f"[来源: {fname}]\n{snippet}")
+                    total += len(snippet)
+                    continue
             chunks = doc.get("chunks", [])
-            for chunk in chunks[:6]:
-                snippet = chunk[:800]
+            for chunk in chunks[:10]:
+                snippet = chunk[:1000]
                 if total + len(snippet) > max_chars:
                     break
                 parts.append(f"[来源: {fname}]\n{snippet}")

@@ -10,6 +10,7 @@ async def process_document_batch(
     file_paths: list[str],
     user_id: str,
     kb_id: str = "default",
+    team_id: str = None,
 ):
     """后台批量处理文档：解析 + 入库"""
     from core.document_parser import DocumentParser
@@ -18,7 +19,7 @@ async def process_document_batch(
     task.status = "running"
     task.total = len(file_paths)
     parser = DocumentParser()
-    kb = get_kb(user_id, kb_id)
+    kb = get_kb(user_id, kb_id, team_id=team_id)
 
     for i, fp in enumerate(file_paths):
         try:

@@ -229,6 +229,5 @@ const personalRoutes = computed(() => getRoutesByGroup('personal'))
     box-shadow: var(--shadow-lg);
   }
   .desktop-only { display: none; }
-  .mobile-only { display: flex; }
 }
 </style>

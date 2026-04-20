@@ -65,7 +65,7 @@ const routes = [
         path: 'knowledge-graph',
         name: 'knowledgeGraph2',
         component: () => import('../views/KnowledgeGraphView.vue'),
-        meta: { title: '知识图谱', icon: '◇', group: 'ai' },
+        meta: { title: '知识图谱', icon: '⬡', group: 'ai' },
       },
       {
         path: 'team',
@@ -77,19 +77,19 @@ const routes = [
         path: 'inbox',
         name: 'inbox',
         component: () => import('../views/InboxView.vue'),
-        meta: { title: '收件箱', icon: '▪', group: 'collab' },
+        meta: { title: '收件箱', icon: '✉', group: 'collab' },
       },
       {
         path: 'memos',
         name: 'memos',
         component: () => import('../views/MemosView.vue'),
-        meta: { title: '备忘录', icon: '☐', group: 'personal' },
+        meta: { title: '备忘录', icon: '✎', group: 'personal' },
       },
       {
         path: 'analytics',
         name: 'analytics',
         component: () => import('../views/AnalyticsView.vue'),
-        meta: { title: '数据分析', icon: '⊿', group: 'personal' },
+        meta: { title: '数据分析', icon: '☰', group: 'personal' },
       },
       {
         path: 'settings',

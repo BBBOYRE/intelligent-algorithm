@@ -21,7 +21,8 @@
         <span class="kg-stats" v-if="graphData">
           {{ graphData.nodes.length }} 个实体 · {{ graphData.edges.length }} 条关系
         </span>
-        <n-button v-if="graphData" size="small" @click="downloadGraph">导出图谱数据</n-button>
+        <n-button v-if="graphData" size="small" @click="downloadImage">导出为图片</n-button>
+        <n-button v-if="graphData" size="small" @click="downloadGraph">导出JSON</n-button>
       </div>
 
       <div class="kg-container" ref="graphContainer">
@@ -73,7 +74,7 @@ const appStore = useAppStore()
 
 const loadFiles = async () => {
   try {
-    const files = await api.getKGFiles(appStore.currentKbId)
+    const files = await api.getKGFiles(appStore.currentKbId, appStore.currentTeamId || '')
     fileOptions.value = files.map(f => ({ label: f.name, value: f.name }))
   } catch {}
 }
@@ -110,7 +111,7 @@ const startGenerate = async () => {
   selectedNode.value = null
   try {
     const names = selectedFiles.value.length > 0 ? selectedFiles.value : null
-    const { task_id } = await api.generateKG(names, appStore.currentKbId)
+    const { task_id } = await api.generateKG(names, appStore.currentKbId, appStore.currentTeamId || '')
     pollForResult(task_id)
   } catch (e) {
     loading.value = false
@@ -214,17 +215,49 @@ watch(
   { deep: true }
 )
 
-const downloadGraph = () => {
-  if (!graphData.value) return
-  const json = JSON.stringify({ nodes: graphData.value.nodes, edges: graphData.value.edges }, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
+const downloadGraph = async () => {
+  if (!graphData.value) { message.warning('暂无图谱数据'); return }
+  try {
+    const json = JSON.stringify({ nodes: graphData.value.nodes, edges: graphData.value.edges }, null, 2)
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    await saveWithDialog(blob, 'knowledge_graph.json')
+  } catch (e) {
+    message.error('导出失败: ' + e.message)
+  }
+}
+
+const downloadImage = async () => {
+  if (!graphContainer.value) { message.warning('暂无图谱'); return }
+  try {
+    const canvas = graphContainer.value.querySelector('canvas')
+    if (!canvas) { message.warning('未找到画布'); return }
+    const dataUrl = canvas.toDataURL('image/png')
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    await saveWithDialog(blob, 'knowledge_graph.png')
+  } catch (e) {
+    message.error('导出图片失败: ' + e.message)
+  }
+}
+
+const saveWithDialog = async (blob, filename) => {
+  try {
+    const formData = new FormData()
+    formData.append('file', blob, filename)
+    const tempRes = await api.saveTempFile(formData)
+    if (tempRes?.path) {
+      const saveRes = await api.saveFileAs(tempRes.path)
+      if (saveRes?.status === 'success') { message.success('已保存到: ' + saveRes.saved_to); return }
+      if (saveRes?.status === 'cancelled') return
+    }
+  } catch {}
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = 'knowledge_graph.json'
+  a.href = url
+  a.download = filename
   document.body.appendChild(a)
   a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(a.href)
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 100)
 }
 </script>
 

@@ -48,11 +48,13 @@ export default {
   uploadFiles(formData) {
     return http.post('/documents/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 600000,
     }).then(r => r.data)
   },
   uploadFilesAsync(formData) {
     return http.post('/documents/upload-async', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 600000,
     }).then(r => r.data)
   },
 
@@ -337,13 +339,18 @@ export default {
   writeBack(outputPath, sourcePath) {
     return http.post('/doc-ops/write-back', { output_path: outputPath, source_path: sourcePath }).then(r => r.data)
   },
+  saveTempFile(formData) {
+    return http.post('/files/save-temp', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
 
   /* ---- Knowledge Graph ---- */
-  getKGFiles(kbId = 'default') {
-    return http.get(`/knowledge-graph/files?kb_id=${kbId}`).then(r => r.data)
+  getKGFiles(kbId = 'default', teamId = '') {
+    return http.get(`/knowledge-graph/files?kb_id=${kbId}&team_id=${teamId}`).then(r => r.data)
   },
-  generateKG(fileNames = null, kbId = 'default') {
-    return http.post(`/knowledge-graph/generate?kb_id=${kbId}`, { file_names: fileNames }).then(r => r.data)
+  generateKG(fileNames = null, kbId = 'default', teamId = '') {
+    return http.post(`/knowledge-graph/generate?kb_id=${kbId}&team_id=${teamId}`, { file_names: fileNames }).then(r => r.data)
   },
   getKGResult(taskId) {
     return http.get(`/knowledge-graph/result/${taskId}`).then(r => r.data)

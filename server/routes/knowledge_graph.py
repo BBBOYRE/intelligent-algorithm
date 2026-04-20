@@ -20,9 +20,10 @@ class KGRequest(BaseModel):
 async def generate_knowledge_graph(
     data: KGRequest = KGRequest(),
     kb_id: str = Query("default"),
+    team_id: str = Query(""),
     current_user: User = Depends(get_current_user),
 ):
-    kb = get_kb(current_user.id, kb_id)
+    kb = get_kb(current_user.id, kb_id, team_id=team_id if team_id else None)
     task_id = f"kg_{current_user.id}_{kb_id}"
     _kg_results[task_id] = {"status": "running"}
 
@@ -56,9 +57,10 @@ async def get_kg_result(
 @router.get("/knowledge-graph/files")
 async def list_kg_files(
     kb_id: str = Query("default"),
+    team_id: str = Query(""),
     current_user: User = Depends(get_current_user),
 ):
-    kb = get_kb(current_user.id, kb_id)
+    kb = get_kb(current_user.id, kb_id, team_id=team_id if team_id else None)
     files = []
     seen = set()
     for doc in kb.all_parsed_docs:
