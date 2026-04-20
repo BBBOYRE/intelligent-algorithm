@@ -6,21 +6,11 @@
         <span class="logo-text" v-show="!store.sidebarCollapsed">文档智能系统</span>
       </div>
       <div class="header-actions">
-        <button class="toggle-btn desktop-only" @click="store.toggleSidebar()" title="Toggle Sidebar">
-          <svg v-if="!store.sidebarCollapsed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-        <button class="toggle-btn mobile-only" @click="store.toggleDrawer()" title="Close Drawer">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <button class="toggle-btn desktop-only" @click="store.toggleSidebar()" title="收起侧边栏">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
       </div>
     </div>
-
-    <!-- 主页按钮独立 -->
-    <router-link to="/" class="home-btn" :class="{ active: $route.path === '/' }">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-text" v-show="!store.sidebarCollapsed">主页</span>
-    </router-link>
 
     <nav class="sidebar-nav">
       <!-- 文档工具 -->
@@ -158,28 +148,6 @@ const personalRoutes = computed(() => getRoutesByGroup('personal'))
 .toggle-btn:hover {
   background: rgba(0, 0, 0, 0.04);
   color: var(--text-primary);
-}
-.home-btn {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.625rem 1rem;
-  margin: 0.5rem 0.75rem 0;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  text-decoration: none;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-.home-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--text-primary);
-}
-.home-btn.active {
-  background: rgba(51, 112, 255, 0.08);
-  color: var(--accent-blue);
 }
 .sidebar-nav {
   flex: 1;

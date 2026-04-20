@@ -7,6 +7,11 @@
             <n-icon><menu-outline /></n-icon>
           </template>
         </n-button>
+        <n-button quaternary class="home-btn" @click="router.push('/')">
+          <template #icon>
+            <n-icon><home-outline /></n-icon>
+          </template>
+        </n-button>
         <ProjectSelector />
         <div class="breadcrumb animate-slide-in" style="margin-left: 1rem;">
           <span class="route-title">{{ currentRouteTitle }}</span>
@@ -36,7 +41,7 @@
 import { computed, h, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
-import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline, MenuOutline, DocumentTextOutline } from '@vicons/ionicons5'
+import { PersonCircleOutline, SettingsOutline, LogOutOutline, MailOutline, MenuOutline, DocumentTextOutline, HomeOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import api from '../api/index.js'

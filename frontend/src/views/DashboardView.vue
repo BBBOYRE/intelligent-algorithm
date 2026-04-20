@@ -65,23 +65,22 @@
 
       <!-- Right: Stats panel -->
       <aside class="stats-sidebar">
-        <div class="stats-card" v-if="pendingTasks.length > 0">
-          <div class="stats-card-title">待办任务</div>
-          <div v-for="t in pendingTasks.slice(0, 5)" :key="t.id" class="task-card">
+        <div class="stats-card">
+          <div class="stats-card-title">任务</div>
+          <div v-if="allTasks.length === 0" class="empty-hint">暂无任务</div>
+          <div v-for="t in allTasks.slice(0, 8)" :key="t.id" class="task-card">
             <div class="task-card-header">
-              <span class="task-title">{{ t.title }}</span>
-              <n-button size="tiny" type="success" @click="openTaskComplete(t)">完成</n-button>
+              <span class="task-title" :class="{ done: t.status === 'completed' }">{{ t.title }}</span>
+              <n-button v-if="t.status !== 'completed'" size="tiny" type="success" @click="openTaskComplete(t)">完成</n-button>
+              <n-tag v-else size="small" type="success">已完成</n-tag>
             </div>
             <div class="task-desc" v-if="t.description">{{ t.description }}</div>
+            <div class="task-desc" v-if="t.status === 'completed' && t.completion_note" style="color:var(--accent-green)">{{ t.completion_note }}</div>
             <div class="task-meta-row">
               <span v-if="t.team_name">来自: {{ t.team_name }}</span>
               <span v-if="t.deadline" class="task-deadline">截止: {{ t.deadline.slice(0, 10) }}</span>
             </div>
           </div>
-        </div>
-        <div class="stats-card" v-if="pendingTasks.length === 0">
-          <div class="stats-card-title">待办任务</div>
-          <div class="empty-hint">暂无待办</div>
         </div>
         <div class="stats-card">
           <div class="stats-card-title">备忘录</div>
@@ -145,6 +144,7 @@ const projects = ref([])
 const feed = ref([])
 const kbStats = ref({ total_chunks: 0, documents: [] })
 const pendingTasks = ref([])
+const allTasks = ref([])
 const memos = ref([])
 const allTaskCount = ref(0)
 const completedTaskCount = ref(0)
@@ -260,6 +260,7 @@ onMounted(async () => {
     const allTeams = await api.listTeams()
     teams.value = allTeams
     let tasks = []
+    let allTasksList = []
     let completed = 0
     let total = 0
     for (const t of allTeams) {
@@ -268,9 +269,11 @@ onMounted(async () => {
         total += teamTasks.length
         completed += teamTasks.filter(tk => tk.status === 'completed').length
         tasks = tasks.concat(teamTasks.filter(tk => tk.status !== 'completed').map(tk => ({ ...tk, team_id: t.id })))
+        allTasksList = allTasksList.concat(teamTasks.map(tk => ({ ...tk, team_id: t.id })))
       } catch {}
     }
     pendingTasks.value = tasks
+    allTasks.value = allTasksList
     allTaskCount.value = total
     completedTaskCount.value = completed
   } catch {}
@@ -328,6 +331,7 @@ onMounted(async () => {
 .stat-row strong { color: var(--text-primary); }
 .task-item { padding: 0.3rem 0; font-size: var(--font-size-sm); display: flex; justify-content: space-between; }
 .task-title { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-title.done { text-decoration: line-through; color: var(--text-muted); }
 .task-deadline { color: var(--text-muted); font-size: var(--font-size-xs); flex-shrink: 0; }
 .empty-hint { color: var(--text-muted); font-size: var(--font-size-sm); text-align: center; padding: 1rem; }
 .charts-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
