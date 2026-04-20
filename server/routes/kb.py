@@ -192,6 +192,30 @@ async def create_knowledge_base(
     return {"status": "success", "id": kb_model.id, "name": kb_model.name}
 
 
+class KBUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    visibility: Optional[str] = None
+
+
+@router.patch("/kb/{kb_id}")
+async def update_knowledge_base(
+    kb_id: str,
+    data: KBUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    kb_model = _resolve_kb(kb_id, current_user, db, required="admin")
+    if data.name is not None:
+        kb_model.name = data.name
+    if data.description is not None:
+        kb_model.description = data.description
+    if data.visibility is not None and data.visibility in ("all", "restricted"):
+        kb_model.visibility = data.visibility
+    db.commit()
+    return {"status": "success", "id": kb_model.id, "name": kb_model.name}
+
+
 @router.delete("/kb/{kb_id}")
 async def delete_knowledge_base(
     kb_id: str,

@@ -44,17 +44,24 @@
       </div>
 
       <!-- 公告 -->
-      <div class="card-static announcement-section" v-if="currentTeam.announcement || myRole === 'owner' || myRole === 'admin'">
+      <div class="card-static announcement-section">
         <div class="members-header">
           <h3>团队公告</h3>
-          <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" @click="editingAnnouncement = !editingAnnouncement">
-            {{ editingAnnouncement ? '取消' : '编辑' }}
-          </n-button>
+          <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="primary" @click="showAnnInput = !showAnnInput">发布公告</n-button>
         </div>
-        <div v-if="!editingAnnouncement" class="announcement-text">{{ currentTeam.announcement || '暂无公告' }}</div>
-        <div v-else style="display:flex;gap:0.5rem;flex-direction:column">
-          <n-input v-model:value="announcementDraft" type="textarea" :rows="3" placeholder="输入团队公告..." />
-          <n-button type="primary" size="small" @click="saveAnnouncement" style="align-self:flex-end">保存</n-button>
+        <div v-if="showAnnInput" style="display:flex;gap:0.5rem;margin-bottom:1rem">
+          <n-input v-model:value="annDraft" type="textarea" :rows="2" placeholder="输入公告内容..." style="flex:1" />
+          <n-button type="primary" size="small" @click="postAnnouncement" style="align-self:flex-end">发布</n-button>
+        </div>
+        <div v-if="announcements.length === 0" style="text-align:center;padding:1rem;color:var(--text-muted)">暂无公告</div>
+        <div v-else class="activity-list">
+          <div class="activity-item" v-for="a in announcements" :key="a.id">
+            <div style="flex:1">
+              <div style="font-weight:600;color:var(--text-primary)">{{ a.content }}</div>
+              <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:0.25rem">{{ a.author_name }} · {{ a.created_at?.replace('T',' ').slice(0,16) }}</div>
+            </div>
+            <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="error" quaternary @click="deleteAnn(a.id)">删除</n-button>
+          </div>
         </div>
       </div>
 
@@ -62,6 +69,7 @@
       <div class="team-tabs">
         <button class="tab-btn" :class="{ active: teamTab === 'members' }" @click="teamTab = 'members'">成员 ({{ members.length }})</button>
         <button class="tab-btn" :class="{ active: teamTab === 'kb' }" @click="teamTab = 'kb'; loadTeamKBs()">共享知识库</button>
+        <button class="tab-btn" :class="{ active: teamTab === 'tasks' }" @click="teamTab = 'tasks'; loadTasks()">任务</button>
         <button class="tab-btn" :class="{ active: teamTab === 'activity' }" @click="teamTab = 'activity'; loadActivity()">团队动态</button>
       </div>
 
@@ -94,7 +102,36 @@
             </div>
             <div class="kb-row-actions">
               <n-button size="tiny" @click="selectedKBDetail = kb; showKBDetailModal = true">详情</n-button>
+              <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" @click="openEditKB(kb)">编辑</n-button>
               <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="error" @click="deleteTeamKB(kb)">删除</n-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务管理 -->
+      <div class="card-static members-section" v-if="teamTab === 'tasks'">
+        <div class="members-header">
+          <h3>任务列表</h3>
+          <n-button v-if="myRole !== 'viewer'" size="small" type="primary" @click="showTaskModal = true">创建任务</n-button>
+        </div>
+        <div v-if="tasks.length === 0" style="text-align:center;padding:2rem;color:var(--text-muted)">暂无任务</div>
+        <div v-else class="activity-list">
+          <div class="kb-row" v-for="t in tasks" :key="t.id">
+            <div class="kb-row-info" style="flex:1">
+              <span class="kb-row-name">{{ t.title }}</span>
+              <span class="kb-row-meta">
+                负责人: {{ t.assignee_name }} · 指派人: {{ t.assigner_name }}
+                <span v-if="t.deadline"> · 截止: {{ t.deadline?.replace('T',' ').slice(0,10) }}</span>
+              </span>
+            </div>
+            <div class="kb-row-actions">
+              <n-tag :type="t.status === 'completed' ? 'success' : t.status === 'in_progress' ? 'warning' : 'default'" size="small">
+                {{ t.status === 'completed' ? '已完成' : t.status === 'in_progress' ? '进行中' : '待处理' }}
+              </n-tag>
+              <n-button v-if="t.status === 'pending'" size="tiny" @click="updateTaskStatus(t.id, 'in_progress')">开始</n-button>
+              <n-button v-if="t.status === 'in_progress'" size="tiny" type="success" @click="updateTaskStatus(t.id, 'completed')">完成</n-button>
+              <n-button v-if="myRole === 'owner' || myRole === 'admin'" size="tiny" type="error" quaternary @click="deleteTask(t.id)">删除</n-button>
             </div>
           </div>
         </div>
@@ -203,11 +240,57 @@
         </div>
         <div style="margin-bottom:0.5rem;font-weight:600;color:var(--text-primary)">文档列表 ({{ selectedKBDetail.documents.length }})</div>
         <div v-if="selectedKBDetail.documents.length">
-          <div v-for="d in selectedKBDetail.documents" :key="d.file_name" style="padding:0.3rem 0;color:var(--text-secondary);font-size:var(--font-size-sm)">
-            {{ d.file_name }} <n-tag size="tiny">{{ d.format }}</n-tag>
+          <div v-for="d in selectedKBDetail.documents" :key="d.file_name" style="padding:0.4rem 0;display:flex;align-items:center;justify-content:space-between">
+            <span style="color:var(--text-secondary);font-size:var(--font-size-sm)">{{ d.file_name }} <n-tag size="tiny">{{ d.format }}</n-tag></span>
+            <n-button size="tiny" quaternary @click="openDocFile(d)">查看</n-button>
           </div>
         </div>
         <div v-else style="color:var(--text-muted);padding:1rem 0;text-align:center">暂无文档，前往上传页面选择此知识库上传</div>
+      </template>
+    </n-modal>
+
+    <!-- 创建任务弹窗 -->
+    <n-modal v-model:show="showTaskModal" preset="card" title="创建任务" style="width:480px">
+      <n-form :model="taskForm" label-placement="left" label-width="80">
+        <n-form-item label="标题">
+          <n-input v-model:value="taskForm.title" placeholder="任务标题" />
+        </n-form-item>
+        <n-form-item label="描述">
+          <n-input v-model:value="taskForm.description" type="textarea" :rows="2" placeholder="可选" />
+        </n-form-item>
+        <n-form-item label="负责人">
+          <n-select v-model:value="taskForm.assignee_id" :options="memberOptions" placeholder="选择成员" />
+        </n-form-item>
+        <n-form-item label="截止日期">
+          <n-date-picker v-model:value="taskDeadlineTs" type="date" clearable style="width:100%" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <n-button @click="showTaskModal = false">取消</n-button>
+          <n-button type="primary" @click="doCreateTask">创建</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 编辑知识库弹窗 -->
+    <n-modal v-model:show="showEditKBModal" preset="card" title="编辑知识库" style="width:420px">
+      <n-form :model="editKBForm" label-placement="left" label-width="80">
+        <n-form-item label="名称">
+          <n-input v-model:value="editKBForm.name" />
+        </n-form-item>
+        <n-form-item label="描述">
+          <n-input v-model:value="editKBForm.description" type="textarea" :rows="2" />
+        </n-form-item>
+        <n-form-item label="可见性">
+          <n-select v-model:value="editKBForm.visibility" :options="[{label:'全员可见',value:'all'},{label:'受限访问',value:'restricted'}]" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <n-button @click="showEditKBModal = false">取消</n-button>
+          <n-button type="primary" @click="doEditKB">保存</n-button>
+        </div>
       </template>
     </n-modal>
   </div>
@@ -237,6 +320,16 @@ const showCreateKBModal = ref(false)
 const showKBDetailModal = ref(false)
 const selectedKBDetail = ref(null)
 const createKBForm = ref({ name: '', description: '', visibility: 'all' })
+
+const announcements = ref([])
+const showAnnInput = ref(false)
+const annDraft = ref('')
+const tasks = ref([])
+const showTaskModal = ref(false)
+const taskForm = ref({ title: '', description: '', assignee_id: '' })
+const taskDeadlineTs = ref(null)
+const showEditKBModal = ref(false)
+const editKBForm = ref({ id: '', name: '', description: '', visibility: 'all' })
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -283,6 +376,10 @@ const memberColumns = computed(() => [
   },
 ])
 
+const memberOptions = computed(() =>
+  members.value.map(m => ({ label: `${m.username} (${roleLabel[m.role] || m.role})`, value: m.user_id }))
+)
+
 const loadTeams = async () => {
   loading.value = true
   loadError.value = ''
@@ -307,6 +404,7 @@ const loadTeamDetail = async (teamId) => {
     members.value = detail.members || []
     const me = teams.value.find(t => t.id === teamId)
     myRole.value = me?.my_role || 'member'
+    await loadAnnouncements()
   } catch (e) {
     console.error('loadTeamDetail error:', e)
     message.error(e?.response?.data?.detail || '加载团队详情失败')
@@ -314,8 +412,8 @@ const loadTeamDetail = async (teamId) => {
 }
 
 const onTeamChange = (id) => {
-  if (id) loadTeamDetail(id)
-  else { currentTeam.value = null; members.value = [] }
+  if (id) { loadTeamDetail(id); loadAnnouncements() }
+  else { currentTeam.value = null; members.value = []; announcements.value = [] }
 }
 
 const doCreate = async () => {
@@ -421,6 +519,93 @@ const saveAnnouncement = async () => {
     await loadTeamDetail(currentTeamId.value)
   } catch (e) {
     message.error(e?.response?.data?.detail || '保存失败')
+  }
+}
+
+const loadAnnouncements = async () => {
+  if (!currentTeamId.value) return
+  try { announcements.value = await api.getAnnouncements(currentTeamId.value) } catch { announcements.value = [] }
+}
+
+const postAnnouncement = async () => {
+  if (!annDraft.value.trim()) return message.warning('请输入公告内容')
+  try {
+    await api.createAnnouncement(currentTeamId.value, annDraft.value)
+    annDraft.value = ''
+    showAnnInput.value = false
+    message.success('公告已发布')
+    await loadAnnouncements()
+  } catch (e) { message.error(e?.response?.data?.detail || '发布失败') }
+}
+
+const deleteAnn = async (annId) => {
+  try {
+    await api.deleteAnnouncement(currentTeamId.value, annId)
+    await loadAnnouncements()
+  } catch (e) { message.error(e?.response?.data?.detail || '删除失败') }
+}
+
+const loadTasks = async () => {
+  if (!currentTeamId.value) return
+  try { tasks.value = await api.getTeamTasks(currentTeamId.value) } catch { tasks.value = [] }
+}
+
+const doCreateTask = async () => {
+  if (!taskForm.value.title.trim()) return message.warning('请输入标题')
+  if (!taskForm.value.assignee_id) return message.warning('请选择负责人')
+  const data = { ...taskForm.value }
+  if (taskDeadlineTs.value) {
+    data.deadline = new Date(taskDeadlineTs.value).toISOString()
+  }
+  try {
+    await api.createTeamTask(currentTeamId.value, data)
+    message.success('任务已创建')
+    showTaskModal.value = false
+    taskForm.value = { title: '', description: '', assignee_id: '' }
+    taskDeadlineTs.value = null
+    await loadTasks()
+  } catch (e) { message.error(e?.response?.data?.detail || '创建失败') }
+}
+
+const updateTaskStatus = async (taskId, status) => {
+  try {
+    await api.updateTeamTaskStatus(currentTeamId.value, taskId, status)
+    await loadTasks()
+  } catch (e) { message.error(e?.response?.data?.detail || '更新失败') }
+}
+
+const deleteTask = async (taskId) => {
+  try {
+    await api.deleteTeamTask(currentTeamId.value, taskId)
+    await loadTasks()
+  } catch (e) { message.error(e?.response?.data?.detail || '删除失败') }
+}
+
+const openEditKB = (kb) => {
+  editKBForm.value = { id: kb.id, name: kb.name, description: kb.description || '', visibility: kb.visibility || 'all' }
+  showEditKBModal.value = true
+}
+
+const doEditKB = async () => {
+  try {
+    await api.updateKB(editKBForm.value.id, { name: editKBForm.value.name, description: editKBForm.value.description, visibility: editKBForm.value.visibility })
+    message.success('知识库已更新')
+    showEditKBModal.value = false
+    await loadTeamKBs()
+  } catch (e) { message.error(e?.response?.data?.detail || '更新失败') }
+}
+
+const openDocFile = async (doc) => {
+  if (!doc.source_path) {
+    const url = api.getDownloadUrl(doc.source_path || '')
+    window.open(url, '_blank')
+    return
+  }
+  try {
+    await api.openLocalFile(doc.source_path)
+    message.success('已打开文件')
+  } catch {
+    window.open(api.getDownloadUrl(doc.source_path), '_blank')
   }
 }
 

@@ -476,10 +476,8 @@ const confirmFill = async () => {
 .requirement-input::placeholder {
   color: var(--text-muted);
 }
-<<<<<<< HEAD
-=======
 
-/* 新增：二选一按钮组样式 */
+/* 二选一按钮组样式 */
 .precision-section {
   display: flex;
   flex-direction: column;
@@ -510,7 +508,7 @@ const confirmFill = async () => {
 }
 .toggle-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.04);
 }
 .toggle-btn.active {
   background: var(--accent-blue);
@@ -522,32 +520,6 @@ const confirmFill = async () => {
   cursor: not-allowed;
 }
 
-.custom-requirements-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.requirement-input {
-  width: 100%;
-  resize: vertical;
-  padding: 0.75rem 1rem;
-  font-size: var(--font-size-md, 14px);
-  color: var(--text-primary);
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md, 6px);
-  outline: none;
-  transition: border-color var(--transition-fast, 0.2s);
-  font-family: inherit;
-  box-sizing: border-box;
-}
-.requirement-input:focus {
-  border-color: var(--accent-blue);
-}
-.requirement-input::placeholder {
-  color: var(--text-muted);
-}
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
 .action-box {
   margin-top: auto;
 }
@@ -593,7 +565,6 @@ const confirmFill = async () => {
   font-size: var(--font-size-md);
   line-height: 1.6;
 }
-<<<<<<< HEAD
 .result-time {
   color: var(--text-muted);
   font-size: var(--font-size-sm);
@@ -602,8 +573,6 @@ const confirmFill = async () => {
   color: var(--accent-blue);
   font-size: var(--font-size-lg);
 }
-=======
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
 .highlight {
   font-size: var(--font-size-xl);
   color: var(--accent-blue);

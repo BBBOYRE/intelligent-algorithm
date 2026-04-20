@@ -193,6 +193,36 @@ export default {
     return http.get(`/teams/${teamId}/activity?limit=${limit}`).then(r => r.data)
   },
 
+  /* ---- Team Announcements ---- */
+  getAnnouncements(teamId) {
+    return http.get(`/teams/${teamId}/announcements`).then(r => r.data)
+  },
+  createAnnouncement(teamId, content) {
+    return http.post(`/teams/${teamId}/announcements`, { content }).then(r => r.data)
+  },
+  deleteAnnouncement(teamId, annId) {
+    return http.delete(`/teams/${teamId}/announcements/${annId}`).then(r => r.data)
+  },
+
+  /* ---- Team Tasks ---- */
+  getTeamTasks(teamId) {
+    return http.get(`/teams/${teamId}/tasks`).then(r => r.data)
+  },
+  createTeamTask(teamId, data) {
+    return http.post(`/teams/${teamId}/tasks`, data).then(r => r.data)
+  },
+  updateTeamTaskStatus(teamId, taskId, status) {
+    return http.patch(`/teams/${teamId}/tasks/${taskId}`, { status }).then(r => r.data)
+  },
+  deleteTeamTask(teamId, taskId) {
+    return http.delete(`/teams/${teamId}/tasks/${taskId}`).then(r => r.data)
+  },
+
+  /* ---- KB Update ---- */
+  updateKB(kbId, data) {
+    return http.patch(`/kb/${kbId}`, data).then(r => r.data)
+  },
+
   /* ---- API Keys ---- */
   listApiKeys() {
     return http.get('/api-keys').then(r => r.data)

@@ -1,0 +1,5 @@
+  git add -A
+  git commit -m "feat: 团队公告/任务指派/KB编辑/文档查看 + 合并冲突清理"
+  git push origin ga
+
+  如果 push 被拒绝（远程有新提交），先 git pull origin ga --no-edit 再 push。
