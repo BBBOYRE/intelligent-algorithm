@@ -68,7 +68,9 @@ async def fill_table_endpoint(
     try:
         template_path = await save_uploaded_file_fastapi(file)
         filename = getattr(file, "filename", "template.bin")
-        output_path = build_output_path(filename)
+        import uuid as _uuid
+        safe_name = f"filled_{_uuid.uuid4().hex[:8]}_{filename}"
+        output_path = build_output_path(safe_name)
         filler = _get_filler(current_user.id, kb_id, team_id if team_id else None)
         result = filler.fill_template(
             template_path,

@@ -43,14 +43,30 @@
             <div class="kb-list-section">
               <div class="kb-list-header">
                 <span>知识库 ({{ project.knowledge_bases?.length || 0 }})</span>
+                <div class="kb-actions" v-if="project.kb_id">
+                  <n-button size="tiny" @click="goUpload">上传文档</n-button>
+                  <n-button size="tiny" @click="goManageKB">管理知识库</n-button>
+                </div>
               </div>
               <div class="kb-file-list">
                 <div v-if="!project.knowledge_bases?.length" class="empty-hint">暂无关联知识库</div>
-                <div v-for="kb in project.knowledge_bases" :key="kb.id" class="kb-file-row">
-                  <span class="kb-file-icon">📚</span>
-                  <span class="kb-file-name">{{ kb.name }}</span>
-                  <span class="kb-file-desc">{{ kb.description || '' }}</span>
-                </div>
+                <template v-else>
+                  <div v-for="kb in project.knowledge_bases" :key="kb.id" class="kb-summary">
+                    <div class="kb-summary-row">
+                      <span class="kb-file-icon">📚</span>
+                      <span class="kb-file-name">{{ kb.name }}</span>
+                      <span class="kb-meta">{{ kb.total_chunks }} 个分块 · {{ kb.doc_count }} 个文档</span>
+                    </div>
+                  </div>
+                  <div class="doc-list" v-if="documents.length">
+                    <div v-for="doc in documents" :key="doc.file_name" class="doc-row">
+                      <span class="doc-icon">📄</span>
+                      <span class="doc-name">{{ doc.file_name }}</span>
+                      <span class="doc-format">{{ doc.format }}</span>
+                    </div>
+                  </div>
+                  <div v-else-if="project.kb_id" class="empty-hint">暂无文档，点击上方"上传文档"添加</div>
+                </template>
               </div>
             </div>
           </main>
@@ -84,13 +100,16 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
+import { useAppStore } from '../stores/app.js'
 import api from '../api/index.js'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
+const appStore = useAppStore()
 const project = ref(null)
+const documents = ref([])
 const showEdit = ref(false)
 const editForm = ref({ name: '', description: '' })
 const allProjects = ref([])
@@ -101,9 +120,33 @@ const personalProjects = computed(() => allProjects.value.filter(p => p.is_perso
 const loadProject = async () => {
   try {
     project.value = await api.getProject(route.params.id)
+    if (project.value.kb_id) {
+      await loadDocuments(project.value.kb_id)
+    }
   } catch (e) {
     message.error('项目不存在')
     router.push('/')
+  }
+}
+
+const loadDocuments = async (kbId) => {
+  try {
+    const res = await api.listKBDocuments(kbId)
+    documents.value = res.documents || []
+  } catch { documents.value = [] }
+}
+
+const goUpload = () => {
+  if (project.value?.kb_id) {
+    appStore.switchKb(project.value.kb_id)
+    router.push('/upload')
+  }
+}
+
+const goManageKB = () => {
+  if (project.value?.kb_id) {
+    appStore.switchKb(project.value.kb_id)
+    router.push('/knowledge-base')
   }
 }
 
@@ -183,13 +226,20 @@ onMounted(async () => {
 .project-layout { display: grid; grid-template-columns: 1fr 280px; gap: 2rem; }
 .project-desc { color: var(--text-secondary); font-size: var(--font-size-md); margin-bottom: 1.5rem; line-height: 1.6; }
 .kb-list-section { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; }
-.kb-list-header { padding: 0.75rem 1rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary); }
-.kb-file-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-subtle); font-size: var(--font-size-sm); transition: background 0.15s; }
-.kb-file-row:last-child { border-bottom: none; }
-.kb-file-row:hover { background: rgba(0,0,0,0.02); }
+.kb-list-header { padding: 0.75rem 1rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; }
+.kb-actions { display: flex; gap: 0.5rem; }
+.kb-summary { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-subtle); }
+.kb-summary-row { display: flex; align-items: center; gap: 0.75rem; font-size: var(--font-size-sm); }
+.kb-meta { color: var(--text-muted); margin-left: auto; font-size: 0.8rem; }
+.doc-list { }
+.doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem 0.5rem 2rem; border-bottom: 1px solid var(--border-subtle); font-size: var(--font-size-sm); transition: background 0.15s; }
+.doc-row:last-child { border-bottom: none; }
+.doc-row:hover { background: rgba(0,0,0,0.02); }
+.doc-icon { font-size: 0.9rem; }
+.doc-name { font-weight: 500; color: var(--text-primary); }
+.doc-format { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
 .kb-file-icon { font-size: 1rem; }
 .kb-file-name { font-weight: 500; color: var(--accent-blue); }
-.kb-file-desc { color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .about-card { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.25rem; }
 .about-title { font-weight: 700; font-size: var(--font-size-lg); color: var(--text-primary); margin-bottom: 0.75rem; }
 .about-desc { color: var(--text-secondary); font-size: var(--font-size-sm); margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }

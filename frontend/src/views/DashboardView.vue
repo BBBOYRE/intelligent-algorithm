@@ -5,7 +5,6 @@
       <aside class="projects-sidebar">
         <div class="sidebar-header">
           <span class="sidebar-title">我的项目</span>
-          <n-button size="tiny" type="primary" @click="showCreateProject = true">新建</n-button>
         </div>
         <n-input v-model:value="projectSearch" placeholder="搜索项目..." size="small" clearable style="margin-bottom:0.75rem" />
         <div class="project-list">
@@ -102,17 +101,6 @@
         </div>
       </aside>
     </div>
-    <!-- Create project modal -->
-    <n-modal v-model:show="showCreateProject" preset="dialog" title="新建项目" positive-text="创建" negative-text="取消" @positive-click="doCreateProject">
-      <n-form :model="createForm">
-        <n-form-item label="项目名称">
-          <n-input v-model:value="createForm.name" placeholder="输入项目名称" />
-        </n-form-item>
-        <n-form-item label="描述">
-          <n-input v-model:value="createForm.description" type="textarea" :rows="2" placeholder="可选" />
-        </n-form-item>
-      </n-form>
-    </n-modal>
     <!-- 完成任务弹窗 -->
     <n-modal v-model:show="showCompleteTask" preset="card" title="确认完成任务" style="width:460px">
       <div v-if="completingTask" style="margin-bottom:0.75rem;font-weight:600">{{ completingTask.title }}</div>
@@ -149,8 +137,7 @@ const memos = ref([])
 const allTaskCount = ref(0)
 const completedTaskCount = ref(0)
 const projectSearch = ref('')
-const showCreateProject = ref(false)
-const createForm = ref({ name: '', description: '' })
+const showCompleteTask = ref(false)
 const teams = ref([])
 const showCompleteTask = ref(false)
 const completingTask = ref(null)
@@ -199,16 +186,6 @@ const formatTime = (iso) => {
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
   return iso.replace('T', ' ').slice(0, 16)
 }
-const doCreateProject = async () => {
-  if (!createForm.value.name.trim()) { message.warning('请输入项目名称'); return false }
-  try {
-    await api.createProject(createForm.value)
-    message.success('项目已创建')
-    createForm.value = { name: '', description: '' }
-    await loadProjects()
-  } catch (e) { message.error(e?.response?.data?.detail || '创建失败') }
-}
-
 const isOverdue = (dateStr) => {
   if (!dateStr) return false
   return new Date(dateStr) < new Date()

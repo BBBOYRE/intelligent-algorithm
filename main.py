@@ -1,7 +1,6 @@
 import sys
 import os
 
-# [核心修复] 接管由于 console=False 导致消失的输出流，防止 print 闪退
 if sys.stdout is None or sys.stderr is None:
     sys.stdout = open(os.devnull, 'w')
     sys.stderr = open(os.devnull, 'w')
@@ -9,11 +8,10 @@ if sys.stdout is None or sys.stderr is None:
 import threading
 import time
 import argparse
-import uvicorn
-import webview
-from server.app import app
 
 def run_server(port: int):
+    import uvicorn
+    from server.app import app
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
 
 def main():
@@ -25,12 +23,8 @@ def main():
 
     port = args.port
 
-    # Start FastAPI in a daemon thread
     server_thread = threading.Thread(target=run_server, args=(port,), daemon=True)
     server_thread.start()
-
-    # Give server a moment to start
-    time.sleep(1)
 
     url = f"http://127.0.0.1:{port}"
 
@@ -43,14 +37,34 @@ def main():
         except KeyboardInterrupt:
             pass
     else:
-        # Desktop Window Mode
+        import webview
+
+        loading_html = """
+        <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#f7f8fa">
+        <div style="text-align:center;color:#646a73"><h2>文档智能系统</h2><p>正在启动服务，请稍候...</p></div>
+        </body></html>
+        """
+
         window = webview.create_window(
-            "文档智能系统 - 本地端", 
-            url,
-            width=1280, 
+            "文档智能系统 - 本地端",
+            html=loading_html,
+            width=1280,
             height=800,
             min_size=(1024, 600),
         )
+
+        def _wait_and_load():
+            import urllib.request
+            for _ in range(60):
+                time.sleep(1)
+                try:
+                    urllib.request.urlopen(url, timeout=2)
+                    window.load_url(url)
+                    return
+                except Exception:
+                    pass
+
+        threading.Thread(target=_wait_and_load, daemon=True).start()
         webview.start(debug='--debug' in sys.argv)
 
 if __name__ == '__main__':
