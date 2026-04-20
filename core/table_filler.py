@@ -86,7 +86,7 @@ class TableFiller:
                 continue
             header_names = list(headers_map.values())
             context = self._get_context(header_names, precision)
-            fill_rows = self._extract_data(template_md, header_names, context, requirements)
+            fill_rows = self._extract_data_adaptive(template_md, header_names, context, requirements)
             for row_idx, row_data in enumerate(fill_rows):
                 excel_row = row_idx + 2
                 for header_cell, header_name in headers_map.items():
@@ -100,26 +100,33 @@ class TableFiller:
 
     def _get_context(self, headers: list[str], precision: str) -> str:
         total_chunks = self.kb.get_stats().get("total_chunks", 0)
+        print(f"[TABLE CTX] total_chunks={total_chunks} headers={headers} precision={precision}", flush=True)
 
         # 小文档（<50 chunks）：直接全文喂入
         if total_chunks <= 50:
             full_text = self.kb.get_full_text(separator="\n\n")
+            print(f"[TABLE CTX] Small doc strategy: full_text={len(full_text)} chars", flush=True)
             return full_text[:30000]
 
         # 中等文档（50-300 chunks）：语义检索 + 全文补充
         if total_chunks <= 300:
             context = self._search_context(headers, top_per_header=10, max_hits=30)
+            print(f"[TABLE CTX] Medium doc strategy: search={len(context)} chars", flush=True)
             if len(context) < 8000:
                 full_text = self.kb.get_full_text(separator="\n\n")
                 context += "\n\n---\n\n" + full_text[:20000 - len(context)]
+                print(f"[TABLE CTX] Added full_text supplement, total={len(context)} chars", flush=True)
             return context[:25000]
 
         # 大文档（>300 chunks）：纯语义检索，加大检索量
         if precision == "coarse":
             full_text = self.kb.get_full_text(separator="\n\n")
+            print(f"[TABLE CTX] Large doc coarse: full_text={len(full_text)} chars", flush=True)
             return full_text[:30000]
 
-        return self._search_context(headers, top_per_header=15, max_hits=50)[:30000]
+        context = self._search_context(headers, top_per_header=15, max_hits=50)
+        print(f"[TABLE CTX] Large doc fine: search={len(context)} chars", flush=True)
+        return context[:30000]
 
     def _search_context(self, headers: list[str], top_per_header: int = 10, max_hits: int = 30) -> str:
         seen: set[str] = set()
@@ -134,20 +141,36 @@ class TableFiller:
         return "\n\n".join(h["text"] for h in hits[:max_hits])
 
     def _extract_data_adaptive(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
-        batch_size = 10000
+        batch_size = 6000
+        print(f"[TABLE EXTRACT] context={len(context)} chars, batch_size={batch_size}, batches={max(1, (len(context)+batch_size-1)//batch_size)}", flush=True)
         if len(context) <= batch_size:
             return self._extract_data(template_md, headers, context, requirements)
 
         all_rows = []
         seen_keys: set[str] = set()
+        batch_num = 0
         for i in range(0, len(context), batch_size):
             batch = context[i:i + batch_size]
-            rows = self._extract_data(template_md, headers, batch, requirements)
+            batch_num += 1
+            if batch_num > 1:
+                import time as _t
+                _t.sleep(3)
+            print(f"[TABLE EXTRACT] Batch {batch_num}: {len(batch)} chars", flush=True)
+            try:
+                rows = self._extract_data(template_md, headers, batch, requirements)
+            except Exception as e:
+                print(f"[TABLE EXTRACT] Batch {batch_num} error: {e}", flush=True)
+                rows = []
+            print(f"[TABLE EXTRACT] Batch {batch_num} returned {len(rows)} rows", flush=True)
             for row in rows:
                 key = json.dumps(row, ensure_ascii=False, sort_keys=True)
                 if key not in seen_keys:
                     seen_keys.add(key)
                     all_rows.append(row)
+            if batch_num >= 8:
+                print(f"[TABLE EXTRACT] Reached max 8 batches, stopping", flush=True)
+                break
+        print(f"[TABLE EXTRACT] Total unique rows: {len(all_rows)}", flush=True)
         return all_rows
 
     def _extract_data(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
@@ -156,56 +179,69 @@ class TableFiller:
         if len(template_md) > 3000:
             template_md = template_md[:3000]
 
-        custom_rules = f"\n7. 用户特殊需求（最高优先级）：{requirements}" if requirements and requirements.strip() else ""
+        import time
+        t0 = time.time()
+        print(f"[TABLE LLM] Calling LLM: context={len(context)} chars, headers={headers}", flush=True)
+
+        custom_rules = f"\n用户需求: {requirements}" if requirements and requirements.strip() else ""
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """你是数据提取专家。根据模板结构和上下文，提取所有匹配的结构化数据行。
-
-模板（Markdown）:
-{template_md}
-
-需要提取的字段:
-{headers}
-{custom_rules}
-
-严格规则:
-1. 返回一个JSON数组，每个元素是一个对象，代表表格中的一行。
-2. 对象的key必须与字段名完全一致（包括括号等符号）。
-3. 从上下文中提取所有能找到的数据行，不要遗漏任何一条记录。
-4. 保持原始值不变：数字、日期、百分比等照抄原文，不要转换格式。
-5. 确实找不到的字段填空字符串""。
-6. 只输出JSON数组，不要输出任何其他文字、解释或markdown代码块标记。
-
-示例输出格式:
-[{{"姓名": "张三", "部门": "技术部"}}, {{"姓名": "李四", "部门": "市场部"}}]""",
+                    "你是数据提取专家。从上下文中提取符合字段要求的结构化数据。\n"
+                    "字段: {headers}\n"
+                    "{custom_rules}\n\n"
+                    "规则:\n"
+                    "1. 返回JSON数组，每个元素是一行数据对象\n"
+                    "2. key必须与字段名完全一致\n"
+                    "3. 每个字段的值要简短精炼(不超过50字)\n"
+                    "4. 找不到的填空字符串\n"
+                    "5. 最多提取20条最重要的记录\n"
+                    "6. 只输出JSON数组，不要任何其他文字\n"
+                    "示例: [{{\"时间\":\"1967年\",\"事件\":\"红岸工程启动\"}}]",
                 ),
-                ("human", "上下文如下:\n{context}"),
+                ("human", "{context}"),
             ]
         )
         try:
             chain = prompt | self.llm
-            response = chain.invoke(
-                {
-                    "template_md": template_md,
-                    "headers": json.dumps(headers, ensure_ascii=False),
-                    "context": context or "",
-                    "custom_rules": custom_rules,
-                }
-            )
+            for attempt in range(3):
+                try:
+                    response = chain.invoke(
+                        {
+                            "headers": json.dumps(headers, ensure_ascii=False),
+                            "context": context or "",
+                            "custom_rules": custom_rules,
+                        }
+                    )
+                    break
+                except Exception as retry_err:
+                    if "429" in str(retry_err) or "rate" in str(retry_err).lower():
+                        wait = (attempt + 1) * 5
+                        print(f"[TABLE LLM] Rate limited, waiting {wait}s (attempt {attempt+1}/3)", flush=True)
+                        time.sleep(wait)
+                        if attempt == 2:
+                            raise
+                    else:
+                        raise
         except Exception as e:
-            print(f"[TABLE_FILL] LLM call failed: {e}")
+            elapsed = time.time() - t0
+            print(f"[TABLE LLM] FAILED in {elapsed:.1f}s: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             return []
+        elapsed = time.time() - t0
         content = getattr(response, "content", "")
         if isinstance(content, list):
             content = "\n".join(str(item) for item in content)
+        print(f"[TABLE LLM] Response in {elapsed:.1f}s: {len(content)} chars, preview: {content[:200]}", flush=True)
 
         parsed = self._parse_json_array(content)
         if parsed is not None:
+            print(f"[TABLE LLM] Parsed OK: {len(parsed)} rows", flush=True)
             return parsed
 
-        # 重试：让 LLM 修复 JSON
+        print(f"[TABLE LLM] Parse failed, attempting repair...", flush=True)
         repair_prompt = ChatPromptTemplate.from_messages([
             ("system", "你是JSON修复专家。将以下文本修复为合法的JSON数组。只输出JSON数组，不要任何其他文字。"),
             ("human", "{broken_json}")
@@ -222,21 +258,32 @@ class TableFiller:
     @staticmethod
     def _parse_json_array(text: str) -> list | None:
         text = text.strip()
-        # 去除可能的 markdown 代码块标记
         if text.startswith("```"):
             text = re.sub(r"^```\w*\n?", "", text)
             text = re.sub(r"\n?```$", "", text)
             text = text.strip()
+        # 直接解析
         try:
             result = json.loads(text)
             return result if isinstance(result, list) else None
         except json.JSONDecodeError:
-            match = re.search(r"\[.*\]", text, flags=re.DOTALL)
-            if match:
+            pass
+        # 提取 [...] 部分
+        match = re.search(r"\[.*\]", text, flags=re.DOTALL)
+        if match:
+            try:
+                result = json.loads(match.group(0))
+                return result if isinstance(result, list) else None
+            except json.JSONDecodeError:
+                pass
+        # 处理截断的 JSON — 找最后一个完整的 }, 截断并闭合
+        if text.startswith("["):
+            last_brace = text.rfind("}")
+            if last_brace > 0:
+                truncated = text[:last_brace + 1] + "]"
                 try:
-                    result = json.loads(match.group(0))
+                    result = json.loads(truncated)
                     return result if isinstance(result, list) else None
                 except json.JSONDecodeError:
-                    return None
-            return None
-
+                    pass
+        return None

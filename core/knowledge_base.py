@@ -113,12 +113,26 @@ class KnowledgeBase:
             encoding="utf-8"
         )
     def search(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
-        if not query.strip() or self.collection.count() == 0:
+        if not query.strip():
             return []
-        results = self.collection.query(
-            query_texts=[query],
-            n_results=top_k or Config.RETRIEVAL_TOP_K,
-        )
+        try:
+            if self.collection.count() == 0:
+                return []
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=top_k or Config.RETRIEVAL_TOP_K,
+            )
+        except Exception:
+            self._rebuild_collection()
+            try:
+                if self.collection.count() == 0:
+                    return []
+                results = self.collection.query(
+                    query_texts=[query],
+                    n_results=top_k or Config.RETRIEVAL_TOP_K,
+                )
+            except Exception:
+                return []
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0] if results.get("distances") else [None] * len(documents)
@@ -126,8 +140,37 @@ class KnowledgeBase:
             {"text": doc, "metadata": meta or {}, "distance": dist}
             for doc, meta, dist in zip(documents, metadatas, distances)
         ]
+    def _rebuild_collection(self) -> None:
+        """Delete and recreate a corrupted collection, re-index from parsed_docs."""
+        name = self.collection.name
+        print(f"[KB] Rebuilding corrupted collection: {name}", flush=True)
+        try:
+            self.client.delete_collection(name)
+        except Exception:
+            pass
+        self.collection = self.client.get_or_create_collection(
+            name=name, embedding_function=self.embed_fn, metadata={"hnsw:space": "cosine"},
+        )
+        for doc in self.all_parsed_docs:
+            chunks = doc.get("chunks", [])
+            if not chunks:
+                continue
+            fname = doc.get("file_name", "unknown")
+            fmt = doc.get("metadata", {}).get("format", "")
+            ids = [f"{fname}_{i}" for i in range(len(chunks))]
+            metas = [{"source": fname, "format": fmt, "chunk_index": i} for i in range(len(chunks))]
+            try:
+                self.collection.upsert(documents=chunks, ids=ids, metadatas=metas)
+            except Exception as e:
+                print(f"[KB] Re-index failed for {fname}: {e}", flush=True)
+        print(f"[KB] Rebuild done: {self.collection.count()} chunks", flush=True)
+
     def get_stats(self) -> dict[str, int]:
-        return {"total_chunks": self.collection.count()}
+        try:
+            return {"total_chunks": self.collection.count()}
+        except Exception:
+            self._rebuild_collection()
+            return {"total_chunks": self.collection.count()}
     # ---- 新增：提供一个便捷方法，获取所有文档的纯文本拼接 ----
     def get_full_text(self, separator: str = "\n\n") -> str:
         """从所有 parsed_doc 中提取 text 字段并拼接返回"""
