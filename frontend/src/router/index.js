@@ -21,9 +21,15 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'dashboard',
+        name: 'home',
         component: () => import('../views/DashboardView.vue'),
-        meta: { title: '工作台', icon: '🏠' },
+        meta: { title: '主页', icon: '🏠' },
+      },
+      {
+        path: 'project/:id',
+        name: 'projectDetail',
+        component: () => import('../views/ProjectDetailView.vue'),
+        meta: { title: '项目详情' },
       },
       {
         path: 'upload',

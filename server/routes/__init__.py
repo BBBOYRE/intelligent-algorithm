@@ -18,6 +18,8 @@ from server.routes.inbox import router as inbox_router
 from server.routes.memos import router as memos_router
 from server.routes.announcements import router as announcements_router
 from server.routes.team_tasks import router as team_tasks_router
+from server.routes.projects import router as projects_router
+from server.routes.feed import router as feed_router
 
 __all__ = [
     "documents_router",
@@ -40,4 +42,6 @@ __all__ = [
     "memos_router",
     "announcements_router",
     "team_tasks_router",
+    "projects_router",
+    "feed_router",
 ]

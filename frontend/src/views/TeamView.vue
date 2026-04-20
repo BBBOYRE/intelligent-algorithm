@@ -412,8 +412,8 @@ const loadTeamDetail = async (teamId) => {
 }
 
 const onTeamChange = (id) => {
-  if (id) { loadTeamDetail(id); loadAnnouncements() }
-  else { currentTeam.value = null; members.value = []; announcements.value = [] }
+  if (id) { loadTeamDetail(id); loadAnnouncements(); loadTeamKBs(); loadTasks() }
+  else { currentTeam.value = null; members.value = []; announcements.value = []; teamKBs.value = []; tasks.value = [] }
 }
 
 const doCreate = async () => {

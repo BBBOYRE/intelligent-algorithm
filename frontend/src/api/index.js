@@ -223,6 +223,28 @@ export default {
     return http.patch(`/kb/${kbId}`, data).then(r => r.data)
   },
 
+  /* ---- Projects ---- */
+  listProjects() {
+    return http.get('/projects').then(r => r.data)
+  },
+  createProject(data) {
+    return http.post('/projects', data).then(r => r.data)
+  },
+  getProject(projectId) {
+    return http.get(`/projects/${projectId}`).then(r => r.data)
+  },
+  updateProject(projectId, data) {
+    return http.patch(`/projects/${projectId}`, data).then(r => r.data)
+  },
+  deleteProject(projectId) {
+    return http.delete(`/projects/${projectId}`).then(r => r.data)
+  },
+
+  /* ---- Feed ---- */
+  getFeed(limit = 30) {
+    return http.get(`/feed?limit=${limit}`).then(r => r.data)
+  },
+
   /* ---- API Keys ---- */
   listApiKeys() {
     return http.get('/api-keys').then(r => r.data)
