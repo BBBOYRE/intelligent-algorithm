@@ -246,4 +246,4 @@ yarn-error.log
 .claude/
 
 # ChromaDB runtime data
-data/chroma_db/
+data/

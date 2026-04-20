@@ -86,6 +86,7 @@ python main.py
 ```bash
 python scripts\build.py
 ```
+建议先进入 `intelligent-algorithm` conda 环境后再执行，以确保 Python 依赖与 PyInstaller 使用的是同一环境。
 
 该打包构建脚本会自动替你打理一切底层脏活：
 1. **前端打包**：执行 `yarn build` 将 Vue 代码静态化至 `dist`。

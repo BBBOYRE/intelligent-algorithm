@@ -22,9 +22,12 @@ hiddenimports = [
     'docling_core.transforms.chunker',
     'docx',
     'langchain_community.embeddings',
+    'langchain_openai',
+    'langchain_ollama',
 ]
 
-for pkg in ['chromadb', 'sentence_transformers', 'docling', 'docling_core', 'docx', 'langchain_community']:
+# Keep package collection scoped to runtime-used modules to reduce noise and build time.
+for pkg in ['chromadb', 'sentence_transformers', 'docling', 'docling_core', 'docx', 'langchain_community.embeddings']:
     tmp_ret = collect_all(pkg)
     datas += tmp_ret[0]
     binaries += tmp_ret[1]

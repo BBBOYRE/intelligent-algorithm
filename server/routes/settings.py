@@ -9,8 +9,7 @@ from config import Config
 
 router = APIRouter()
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ENV_PATH = os.path.join(BASE_DIR, ".env")
+ENV_PATH = os.path.join(Config.BASE_DIR, ".env")
 
 
 class LLMConfig(BaseModel):
