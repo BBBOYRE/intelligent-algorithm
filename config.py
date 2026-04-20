@@ -1,10 +1,18 @@
 import os
+import sys
 from dotenv import load_dotenv
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def get_runtime_base_dir() -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = get_runtime_base_dir()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 class Config:
+    BASE_DIR = BASE_DIR
     # ==================== 部署模式 ====================
     DEPLOYMENT_MODE = os.getenv("DEPLOYMENT_MODE", "private")  # "private" | "saas"
     AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
