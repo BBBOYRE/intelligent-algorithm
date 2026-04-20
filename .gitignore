@@ -247,3 +247,5 @@ yarn-error.log
 
 # ChromaDB runtime data
 data/
+
+sample_data/
