@@ -137,8 +137,13 @@ async def chat_endpoint(
                 content = str(chunk)
                 full_answer += content
                 yield content
-            
-            # Use a new DB session for background task since the request DB session might close
+
+            file_path = _maybe_generate_file(full_answer, req.message)
+            if file_path:
+                marker = f"\n\n[DOWNLOAD_FILE:{file_path}]"
+                full_answer += marker
+                yield marker
+
             from server.database import SessionLocal
             with SessionLocal() as bg_db:
                 bg_session = bg_db.query(ChatSession).filter_by(id=session_id).first()
@@ -173,3 +178,26 @@ async def chat_endpoint(
                     bg_db.commit()
     
     return StreamingResponse(generate_response(), media_type="text/plain", headers={"X-Session-ID": session_id})
+
+
+def _maybe_generate_file(answer: str, question: str) -> str:
+    """If the answer contains structured list data (>5 items), save as a text file and return path."""
+    import os
+    import re
+    lines = answer.strip().split("\n")
+    list_lines = [l for l in lines if re.match(r'^\s*[\d\-\*\•\.]+[\.\)、]\s*\S', l)]
+    if len(list_lines) < 5:
+        return ""
+    try:
+        from config import Config
+        out_dir = os.path.join(Config.OUTPUT_DIR, "chat_files")
+        os.makedirs(out_dir, exist_ok=True)
+        safe_q = re.sub(r'[^\w\u4e00-\u9fff]', '_', question)[:30]
+        fname = f"{safe_q}_{uuid.uuid4().hex[:6]}.txt"
+        fpath = os.path.join(out_dir, fname)
+        with open(fpath, "w", encoding="utf-8") as f:
+            f.write(answer)
+        return fpath
+    except Exception as e:
+        print(f"[CHAT FILE] Failed to generate file: {e}")
+        return ""

@@ -124,8 +124,13 @@ const isTyping = computed(() => chatStore.isSessionWaiting(chatStore.activeSessi
 const formatMessage = (text) => {
   if (!text) return ''
   try {
-    const rawHtml = marked(text)
-    return DOMPurify.sanitize(rawHtml)
+    let processed = text.replace(/\[DOWNLOAD_FILE:([^\]]+)\]/g, (_, path) => {
+      const url = api.getDownloadUrl(path)
+      const fname = path.split(/[/\\]/).pop() || 'file'
+      return `<a href="${url}" target="_blank" class="chat-file-link">📎 下载文件: ${fname}</a>`
+    })
+    const rawHtml = marked(processed)
+    return DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target'] })
   } catch (e) {
     return text.replace(/\n/g, '<br/>')
   }
@@ -510,5 +515,20 @@ watch(
   .chat-sidebar {
     max-height: 180px;
   }
+}
+:deep(.chat-file-link) {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(51, 112, 255, 0.06);
+  border: 1px solid rgba(51, 112, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--accent-blue);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+:deep(.chat-file-link:hover) {
+  background: rgba(51, 112, 255, 0.12);
 }
 </style>

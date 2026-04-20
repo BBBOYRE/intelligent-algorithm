@@ -64,19 +64,30 @@ class KnowledgeBase:
             except json.JSONDecodeError:
                 self.all_parsed_docs = []
     def _generate_summary(self, file_name: str, chunks: list[str]) -> str:
-        """Use LLM to generate a summary of the document."""
+        """Use LLM to generate a summary of the document, with timeout protection."""
+        import concurrent.futures
         try:
             from core.llm_factory import create_llm
             llm = create_llm()
             preview = "\n".join(chunks[:5])[:3000]
-            response = llm.invoke(
-                f"请用中文为以下文档生成一段简洁的摘要(100-200字)，概括文档的主题、关键内容和要点。\n\n"
-                f"文件名: {file_name}\n\n内容片段:\n{preview}"
-            )
+
+            def _call_llm():
+                return llm.invoke(
+                    f"请用中文为以下文档生成一段简洁的摘要(100-200字)，概括文档的主题、关键内容和要点。\n\n"
+                    f"文件名: {file_name}\n\n内容片段:\n{preview}"
+                )
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(_call_llm)
+                response = future.result(timeout=60)
+
             content = getattr(response, "content", "")
             if isinstance(content, list):
                 content = "\n".join(str(p) for p in content)
             return str(content).strip() or ""
+        except concurrent.futures.TimeoutError:
+            print(f"[SUMMARY] Timeout generating summary for {file_name}")
+            return ""
         except Exception as e:
             print(f"[SUMMARY] Failed to generate summary for {file_name}: {e}")
             return ""

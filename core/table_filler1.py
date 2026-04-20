@@ -47,7 +47,7 @@ class TableFiller:
             if not headers:
                 continue
             context = self._get_context(headers, precision)
-            rows = self._extract_data_adaptive(template_md, headers, context, requirements)
+            rows = self._multiple_extract_data(template_md, headers, context, requirements)
             tables.append({"headers": headers, "rows": rows})
 
         return {"status": "success", "tables": tables}
@@ -61,7 +61,7 @@ class TableFiller:
                 continue
             table = doc.tables[table_info["table_index"]]
             context = self._get_context(headers, precision)
-            fill_rows = self._extract_data_adaptive(template_md, headers, context, requirements)
+            fill_rows = self._multiple_extract_data(template_md, headers, context, requirements)
             for row_idx, row_data in enumerate(fill_rows):
                 write_row_index = row_idx + 1
                 if write_row_index >= len(table.rows):
@@ -86,7 +86,7 @@ class TableFiller:
                 continue
             header_names = list(headers_map.values())
             context = self._get_context(header_names, precision)
-            fill_rows = self._extract_data(template_md, header_names, context, requirements)
+            fill_rows = self._multiple_extract_data(template_md, header_names, context, requirements)
             for row_idx, row_data in enumerate(fill_rows):
                 excel_row = row_idx + 2
                 for header_cell, header_name in headers_map.items():
@@ -99,54 +99,51 @@ class TableFiller:
         return {"status": "success", "filled_cells": total_filled, "output_path": str(output_path)}
 
     def _get_context(self, headers: list[str], precision: str) -> str:
-        total_chunks = self.kb.get_stats().get("total_chunks", 0)
+        max_context = 30000
 
-        # 小文档（<50 chunks）：直接全文喂入
-        if total_chunks <= 50:
-            full_text = self.kb.get_full_text(separator="\n\n")
-            return full_text[:30000]
-
-        # 中等文档（50-300 chunks）：语义检索 + 全文补充
-        if total_chunks <= 300:
-            context = self._search_context(headers, top_per_header=10, max_hits=30)
-            if len(context) < 8000:
-                full_text = self.kb.get_full_text(separator="\n\n")
-                context += "\n\n---\n\n" + full_text[:20000 - len(context)]
-            return context[:25000]
-
-        # 大文档（>300 chunks）：纯语义检索，加大检索量
         if precision == "coarse":
-            full_text = self.kb.get_full_text(separator="\n\n")
-            return full_text[:30000]
+            full_text = self.kb.get_full_text(separator="\n\n---\n\n")
+            return full_text[:max_context]
 
-        return self._search_context(headers, top_per_header=15, max_hits=50)[:30000]
+        seen_texts: set[str] = set()
+        all_hits: list[dict] = []
+        per_header_k = max(5, 30 // len(headers)) if headers else 10
 
-    def _search_context(self, headers: list[str], top_per_header: int = 10, max_hits: int = 30) -> str:
-        seen: set[str] = set()
-        hits: list[dict] = []
-        per_k = max(top_per_header, 30 // max(len(headers), 1))
         for header in headers:
-            for h in self.kb.search(header, top_k=per_k):
-                if h["text"] not in seen:
-                    seen.add(h["text"])
-                    hits.append(h)
-        hits.sort(key=lambda x: x.get("distance", 999))
-        return "\n\n".join(h["text"] for h in hits[:max_hits])
+            hits = self.kb.search(header, top_k=per_header_k)
+            for h in hits:
+                if h["text"] not in seen_texts:
+                    seen_texts.add(h["text"])
+                    all_hits.append(h)
 
-    def _extract_data_adaptive(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
-        batch_size = 10000
-        if len(context) <= batch_size:
-            return self._extract_data(template_md, headers, context, requirements)
+        all_hits.sort(key=lambda x: x.get("distance", 999))
+        context = "\n\n".join([h["text"] for h in all_hits[:40]])
 
-        all_rows = []
-        seen_keys: set[str] = set()
-        for i in range(0, len(context), batch_size):
-            batch = context[i:i + batch_size]
-            rows = self._extract_data(template_md, headers, batch, requirements)
+        if len(context) < 5000:
+            full_text = self.kb.get_full_text(separator="\n\n")
+            if full_text:
+                extra = full_text[:max_context - len(context)]
+                context = context + "\n\n---补充全文---\n\n" + extra
+
+        if len(context) > max_context:
+            context = context[:max_context]
+        return context
+
+    def _multiple_extract_data(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
+        """对于超出长度限制的情况，分批提取并合并结果"""
+        max_context_length = 30000
+        all_rows: list[dict[str, Any]] = []
+        seen_rows: set[tuple] = set()
+        # 按照最大上下文长度分割文本
+        chunks = [context[i:i + max_context_length] for i in range(0, len(context), max_context_length)]
+        for chunk in chunks:
+            # 复用已有的 _extract_data 方法处理单个分块
+            rows = self._extract_data(template_md, headers, chunk, requirements)
             for row in rows:
-                key = json.dumps(row, ensure_ascii=False, sort_keys=True)
-                if key not in seen_keys:
-                    seen_keys.add(key)
+                # 将字典转为元组以便进行去重判断
+                row_tuple = tuple(sorted(row.items()))
+                if row_tuple not in seen_rows:
+                    seen_rows.add(row_tuple)
                     all_rows.append(row)
         return all_rows
 

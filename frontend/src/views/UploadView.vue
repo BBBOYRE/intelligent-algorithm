@@ -221,7 +221,24 @@ const uploadFiles = async () => {
       uploadStatus.value = '正在上传并解析...'
       uploadProgress.value = 0.3
       const res = await api.uploadFiles(formData)
-      toast.success(`成功解析并入库 ${res.success_count} 个文件`)
+      if (res.async && res.task_id) {
+        uploadStatus.value = '后台解析中...'
+        let done = false
+        while (!done) {
+          await new Promise(r => setTimeout(r, 1500))
+          try {
+            const task = await api.getTask(res.task_id)
+            uploadProgress.value = task.progress || 0.5
+            uploadStatus.value = `正在解析: ${task.completed_count || 0}/${task.total || '?'}`
+            if (task.status === 'completed' || task.status === 'failed') {
+              done = true
+              if (task.result) toast.success(`成功解析并入库 ${task.result.success_count} 个文件`)
+            }
+          } catch { done = true }
+        }
+      } else {
+        toast.success(`成功解析并入库 ${res.success_count} 个文件`)
+      }
     }
 
     uploadProgress.value = 1.0
