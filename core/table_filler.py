@@ -9,13 +9,14 @@ from openpyxl import load_workbook
 from core.knowledge_base import KnowledgeBase
 from core.llm_factory import create_llm
 from utils.template_parser import TemplateParser
+
+
 class TableFiller:
     """Auto-fill Word/Excel template tables from KB context."""
     def __init__(self, knowledge_base: KnowledgeBase) -> None:
         self.kb = knowledge_base
         self.llm = create_llm()
         self.template_parser = TemplateParser()
-<<<<<<< HEAD
 
     def fill_template(self, template_path: str | Path, output_path: str | Path, requirements: str = "", precision: str = "fine") -> dict[str, Any]:
         path = Path(template_path)
@@ -51,22 +52,6 @@ class TableFiller:
 
         return {"status": "success", "tables": tables}
 
-=======
-    # 新增 requirements 和 precision 参数
-    def fill_template(self, template_path: str | Path, output_path: str | Path, requirements: str = "", precision: str = "fine") -> dict[str, Any]:
-        path = Path(template_path)
-        out = Path(output_path)
-        parsed = self.template_parser.parse_template(path)
-        template_md = parsed["markdown"]
-        coordinates = parsed["coordinates"]
-        suffix = path.suffix.lower()
-        if suffix == ".docx":
-            return self._fill_word(path, out, template_md, coordinates, requirements, precision)
-        if suffix in {".xlsx", ".xls"}:
-            return self._fill_excel(path, out, template_md, coordinates, requirements, precision)
-        raise ValueError(f"Unsupported template format: {suffix}")
-    # 新增 precision 参数
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
     def _fill_word(self, template_path: Path, output_path: Path, template_md: str, coordinates: list[dict], requirements: str, precision: str) -> dict:
         doc = DocxDocument(template_path)
         total_filled = 0
@@ -75,13 +60,7 @@ class TableFiller:
             if not headers:
                 continue
             table = doc.tables[table_info["table_index"]]
-<<<<<<< HEAD
             context = self._get_context(headers, precision)
-=======
-            # 根据 precision 获取 context
-            context = self._get_context(headers, precision)
-            # 将 requirements 和 precision 传入
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
             fill_rows = self._extract_data(template_md, headers, context, requirements)
             for row_idx, row_data in enumerate(fill_rows):
                 write_row_index = row_idx + 1
@@ -95,11 +74,8 @@ class TableFiller:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         doc.save(output_path)
         return {"status": "success", "filled_cells": total_filled, "output_path": str(output_path)}
-<<<<<<< HEAD
 
-=======
     # 新增 precision 参数
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
     def _fill_excel(self, template_path: Path, output_path: Path, template_md: str, coordinates: list[dict], requirements: str, precision: str) -> dict:
         wb = load_workbook(template_path)
         total_filled = 0
@@ -109,13 +85,7 @@ class TableFiller:
             if not headers_map:
                 continue
             header_names = list(headers_map.values())
-<<<<<<< HEAD
             context = self._get_context(header_names, precision)
-=======
-            # 根据 precision 获取 context
-            context = self._get_context(header_names, precision)
-            # 将 requirements 传入
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
             fill_rows = self._extract_data(template_md, header_names, context, requirements)
             for row_idx, row_data in enumerate(fill_rows):
                 excel_row = row_idx + 2
@@ -127,7 +97,6 @@ class TableFiller:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         wb.save(output_path)
         return {"status": "success", "filled_cells": total_filled, "output_path": str(output_path)}
-<<<<<<< HEAD
 
     def _get_context(self, headers: list[str], precision: str) -> str:
         if precision == "coarse":
@@ -151,27 +120,10 @@ class TableFiller:
 
     def _extract_data(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
         custom_rules = f"\n7. 用户特殊需求（最高优先级）：{requirements}" if requirements and requirements.strip() else ""
-
-=======
-    # 新增：根据精度选项提取上下文的独立方法
-    def _get_context(self, headers: list[str], precision: str) -> str:
-        if precision == "coarse":
-            # 粗略模式：直接获取全量文本
-            return self.kb.get_full_text(separator="\n\n---\n\n")
-        else:
-            # 精细模式(默认)：使用 search 检索相关文本
-            hits = self.kb.search(", ".join(headers), top_k=8)
-            return "\n\n".join([h["text"] for h in hits])
-    # 新增 requirements 参数，并将其整合至 Prompt 规则中
-    def _extract_data(self, template_md: str, headers: list[str], context: str, requirements: str) -> list[dict[str, Any]]:
-        # 将用户需求格式化追加到规则中，若无需求则追加空字符串
-        custom_rules = f"\n5. 用户特殊需求：{requirements}" if requirements and requirements.strip() else ""
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-<<<<<<< HEAD
                     """你是数据提取专家。根据模板结构和上下文，提取所有匹配的结构化数据行。
 
 模板（Markdown）:
@@ -191,21 +143,6 @@ class TableFiller:
 
 示例输出格式:
 [{{"姓名": "张三", "部门": "技术部"}}, {{"姓名": "李四", "部门": "市场部"}}]""",
-=======
-                    """你是数据提取专家。根据模板和上下文提取结构化数据。
-模板（Markdown）:
-{template_md}
-字段:
-{headers}
-【最高优先级 - 特殊规则】:
-{custom_rules}
-注意：特殊规则中的要求优先级高于下面所有默认规则。
-规则:
-1. 必须返回 JSON 数组。
-2. 每个元素表示一行。
-3. 字段名必须与给定字段一致。
-4. 未找到的信息填 ""。""",
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
                 ),
                 ("human", "上下文如下:\n{context}"),
             ]
@@ -216,17 +153,12 @@ class TableFiller:
                 "template_md": template_md,
                 "headers": json.dumps(headers, ensure_ascii=False),
                 "context": context or "",
-<<<<<<< HEAD
                 "custom_rules": custom_rules,
-=======
-                "custom_rules": custom_rules,  # 传入变量
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
             }
         )
         content = getattr(response, "content", "")
         if isinstance(content, list):
             content = "\n".join(str(item) for item in content)
-<<<<<<< HEAD
 
         parsed = self._parse_json_array(content)
         if parsed is not None:
@@ -254,13 +186,10 @@ class TableFiller:
             text = re.sub(r"^```\w*\n?", "", text)
             text = re.sub(r"\n?```$", "", text)
             text = text.strip()
-=======
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
         try:
             result = json.loads(text)
             return result if isinstance(result, list) else None
         except json.JSONDecodeError:
-<<<<<<< HEAD
             match = re.search(r"\[.*\]", text, flags=re.DOTALL)
             if match:
                 try:
@@ -269,13 +198,4 @@ class TableFiller:
                 except json.JSONDecodeError:
                     return None
             return None
-=======
-            match = re.search(r"\[.*\]", content, flags=re.DOTALL)
-            if not match:
-                return []
-            try:
-                parsed = json.loads(match.group(0))
-                return parsed if isinstance(parsed, list) else []
-            except json.JSONDecodeError:
-                return []
->>>>>>> 1740eea54a243f978a2d6a217c18f4d8651cdab0
+
