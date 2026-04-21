@@ -72,8 +72,6 @@ def get_llm_config(current_user: User = Depends(get_current_user)):
 
 @router.put("/settings/llm")
 def update_llm_config(config: LLMConfig, current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can modify LLM settings")
 
     updates = {}
     if config.llm_provider:
