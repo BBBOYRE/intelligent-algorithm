@@ -16,9 +16,6 @@
         <div class="kb-doc-list" v-if="kbStats.documents && kbStats.documents.length > 0">
           <span class="doc-tag" v-for="doc in kbStats.documents" :key="doc.file_name">{{ doc.file_name }}</span>
         </div>
-        <button class="btn btn-danger-sm" @click="handleClearKB" :disabled="isUploading || isClearing">
-          {{ isClearing ? '清空中...' : '清空知识库' }}
-        </button>
       </div>
 
       <div 
@@ -87,7 +84,6 @@ const fileInput = ref(null)
 const files = ref([])
 const isDragging = ref(false)
 const isUploading = ref(false)
-const isClearing = ref(false)
 const uploadProgress = ref(0)
 const uploadStatus = ref('')
 const toast = useToast()
@@ -105,21 +101,6 @@ const loadKBStats = async () => {
 watch(() => store.currentKbId, () => {
   loadKBStats()
 })
-
-const handleClearKB = async () => {
-  if (!confirm('确定要清空知识库吗？所有已入库的文档数据将被删除。')) return
-  isClearing.value = true
-  try {
-    await api.clearKB(store.currentKbId)
-    toast.success('知识库已清空')
-    await loadKBStats()
-    await store.refreshKBStats()
-  } catch (e) {
-    toast.error('清空失败: ' + e.message)
-  } finally {
-    isClearing.value = false
-  }
-}
 
 onMounted(() => {
   loadKBStats()
