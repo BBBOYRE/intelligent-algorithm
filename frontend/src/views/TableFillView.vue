@@ -124,7 +124,6 @@
           <div class="success-icon">✅</div>
           <h3>填写完成</h3>
           <p class="result-detail">系统成功在表格中填入了 <strong class="highlight">{{ result.filled_cells }}</strong> 个数据单元格！</p>
-          <p class="result-time" v-if="elapsedTime">耗时 <strong>{{ elapsedTime }}</strong> 秒</p>
           <div class="download-section">
             <button class="btn btn-success" @click="downloadResult">
               <span class="icon">📥</span> 下载填写好的文档
@@ -136,7 +135,6 @@
           <div class="error-icon">❌</div>
           <h3>处理失败</h3>
           <p class="result-detail">{{ result.error || '发生了未知错误' }}</p>
-          <p class="result-time" v-if="elapsedTime">耗时 <strong>{{ elapsedTime }}</strong> 秒</p>
         </div>
       </div>
     </div>
@@ -322,7 +320,7 @@ const confirmFill = async () => {
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
     result.value = res
     previewData.value = null
-    toast.success(`表格填写完成！耗时 ${elapsedTime.value}s`)
+    toast.success('表格填写完成！')
   } catch (error) {
     elapsedTime.value = ((Date.now() - startTime) / 1000).toFixed(1)
     toast.error('执行失败: ' + error.message)
