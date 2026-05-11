@@ -54,7 +54,9 @@ class DocOperator:
 
 严格规则：
 - 只输出 JSON，不要输出任何其他文字。
-- target/old 字段的值必须是文档中实际存在的文本片段。
+- **target/old 字段的值必须是文档中实际存在的完整文本片段，不能截断或拆分。**
+- 如果指令是"删除人名"，必须识别出文档中每一个完整的姓名（如"张三"、"李四"），每个姓名作为一个独立的 delete 操作，target 写完整姓名。
+- **禁止按单字删除**：不能只删姓（如"周"）保留名，这会导致误删普通文字中的同姓字。
 - 如果指令是提取或总结类操作（不需要修改文档），返回 {{"operations": [], "summary": "提取/总结操作", "extract_result": "提取或总结的结果文本"}}""",
             ),
             ("human", "文档内容：\n{document}\n\n操作指令：{instruction}"),
@@ -160,55 +162,71 @@ class DocOperator:
     def _apply_replace(doc: DocxDocument, old_text: str, new_text: str) -> int:
         if not old_text:
             return 0
-        count = 0
-        for para in doc.paragraphs:
-            if old_text in para.text:
-                for run in para.runs:
-                    if old_text in run.text:
-                        run.text = run.text.replace(old_text, new_text)
-                        count += 1
-                # 如果 runs 里没匹配到（文本跨 run），整段替换
-                if count == 0 and old_text in para.text:
-                    full = para.text.replace(old_text, new_text)
-                    for i, run in enumerate(para.runs):
-                        run.text = full if i == 0 else ""
-                    count += 1
-        return count
+        paragraphs = list(doc.paragraphs)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    paragraphs.extend(cell.paragraphs)
+        total_count = 0
+        for para in paragraphs:
+            if old_text not in para.text:
+                continue
+            para_count = 0
+            for run in para.runs:
+                if old_text in run.text:
+                    run.text = run.text.replace(old_text, new_text)
+                    para_count += 1
+            # 如果 runs 里没匹配到（文本跨 run），整段替换
+            if para_count == 0 and old_text in para.text:
+                full = para.text.replace(old_text, new_text)
+                for i, run in enumerate(para.runs):
+                    run.text = full if i == 0 else ""
+                para_count = 1
+            total_count += para_count
+        return total_count
 
     @staticmethod
     def _apply_format(doc: DocxDocument, op: dict) -> int:
         target = op.get("target", "")
         if not target:
             return 0
-        count = 0
-        for para in doc.paragraphs:
-            if target in para.text:
-                # 段落级格式
-                if "align" in op:
-                    align_map = {"left": WD_ALIGN_PARAGRAPH.LEFT, "center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT}
-                    para.alignment = align_map.get(op["align"], WD_ALIGN_PARAGRAPH.LEFT)
+        paragraphs = list(doc.paragraphs)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    paragraphs.extend(cell.paragraphs)
+        total_count = 0
+        for para in paragraphs:
+            if target not in para.text:
+                continue
+            # 段落级格式
+            if "align" in op:
+                align_map = {"left": WD_ALIGN_PARAGRAPH.LEFT, "center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT}
+                para.alignment = align_map.get(op["align"], WD_ALIGN_PARAGRAPH.LEFT)
 
-                # run 级格式
+            # run 级格式
+            para_count = 0
+            for run in para.runs:
+                if target in run.text or run.text.strip() in target:
+                    if "bold" in op:
+                        run.bold = op["bold"]
+                    if "italic" in op:
+                        run.italic = op["italic"]
+                    if "font_size" in op:
+                        run.font.size = Pt(op["font_size"])
+                    para_count += 1
+            if para_count == 0:
+                # 没有精确匹配 run，对所有 run 应用
                 for run in para.runs:
-                    if target in run.text or run.text.strip() in target:
-                        if "bold" in op:
-                            run.bold = op["bold"]
-                        if "italic" in op:
-                            run.italic = op["italic"]
-                        if "font_size" in op:
-                            run.font.size = Pt(op["font_size"])
-                        count += 1
-                if count == 0:
-                    # 没有精确匹配 run，对所有 run 应用
-                    for run in para.runs:
-                        if "bold" in op:
-                            run.bold = op["bold"]
-                        if "italic" in op:
-                            run.italic = op["italic"]
-                        if "font_size" in op:
-                            run.font.size = Pt(op["font_size"])
-                    count += 1
-        return count
+                    if "bold" in op:
+                        run.bold = op["bold"]
+                    if "italic" in op:
+                        run.italic = op["italic"]
+                    if "font_size" in op:
+                        run.font.size = Pt(op["font_size"])
+                para_count = 1
+            total_count += para_count
+        return total_count
 
     @staticmethod
     def _apply_insert(doc: DocxDocument, after_text: str, content: str) -> int:

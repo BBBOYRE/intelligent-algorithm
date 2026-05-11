@@ -35,7 +35,7 @@
           <div class="chart-card">
             <div class="donut-chart" :style="docChartStyle"></div>
             <div class="chart-label">
-              <strong>{{ kbStats.documents?.length || 0 }}</strong>
+              <strong>{{ kbStats.document_count || 0 }}</strong>
               <span>文档数</span>
             </div>
           </div>
@@ -97,7 +97,7 @@
           <div class="stats-card-title">快速统计</div>
           <div class="stat-row"><span>项目数</span><strong>{{ projects.length }}</strong></div>
           <div class="stat-row"><span>知识库分块</span><strong>{{ kbStats.total_chunks || 0 }}</strong></div>
-          <div class="stat-row"><span>已入库文档</span><strong>{{ kbStats.documents?.length || 0 }}</strong></div>
+          <div class="stat-row"><span>已入库文档</span><strong>{{ kbStats.document_count || 0 }}</strong></div>
         </div>
       </aside>
     </div>
@@ -130,7 +130,7 @@ import api from '../api/index.js'
 const message = useMessage()
 const projects = ref([])
 const feed = ref([])
-const kbStats = ref({ total_chunks: 0, documents: [] })
+const kbStats = ref({ total_chunks: 0, document_count: 0 })
 const pendingTasks = ref([])
 const allTasks = ref([])
 const memos = ref([])
@@ -164,7 +164,7 @@ const teamProjects = computed(() => {
 })
 
 const docChartStyle = computed(() => {
-  const docs = kbStats.value.documents?.length || 0
+  const docs = kbStats.value.document_count || 0
   const total = Math.max(kbStats.value.total_chunks || 1, docs)
   const pct = Math.round((docs / total) * 100)
   return { background: `conic-gradient(var(--accent-blue) ${pct}%, var(--bg-input) ${pct}%)` }

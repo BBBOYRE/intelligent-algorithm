@@ -291,6 +291,10 @@ async def get_kb_stats(
     db: Session = Depends(get_db),
 ):
     try:
+        # 默认 kb_id="default" 时，汇总当前用户所有知识库的统计
+        if kb_id == "default":
+            return _aggregate_user_stats(current_user, db)
+
         kb_model = db.query(KnowledgeBaseModel).filter(KnowledgeBaseModel.id == kb_id).first() if kb_id != "default" else None
         if kb_model and kb_model.team_id:
             kb = get_kb(current_user.id, kb_id, team_id=kb_model.team_id)
@@ -304,6 +308,55 @@ async def get_kb_stats(
         return {**stats, "documents": doc_list}
     except Exception as exc:
         return {"total_chunks": 0, "documents": [], "error": str(exc)}
+
+
+def _aggregate_user_stats(current_user: User, db: Session) -> dict:
+    """汇总当前用户所有知识库（个人 + 项目）的统计数据"""
+    # 查找该用户的所有 KnowledgeBaseModel（项目级 KB）
+    kb_models = db.query(KnowledgeBaseModel).filter(
+        KnowledgeBaseModel.user_id == current_user.id
+    ).all()
+
+    total_chunks = 0
+    total_docs = 0
+    all_docs: list[dict] = []
+
+    # 2) 个人默认 KB
+    default_kb = get_kb(current_user.id, "default")
+    s = default_kb.get_stats()
+    total_chunks += s.get("total_chunks", 0)
+    total_docs += s.get("document_count", 0)
+    all_docs.extend(
+        {"file_name": d.get("file_name", "unknown"), "format": d.get("metadata", {}).get("format", "")}
+        for d in default_kb.all_parsed_docs
+    )
+
+    # 3) 项目 KB
+    seen_kb_ids = set()
+    for m in kb_models:
+        if m.id in seen_kb_ids:
+            continue
+        seen_kb_ids.add(m.id)
+        try:
+            if m.team_id:
+                kb = get_kb(current_user.id, m.id, team_id=m.team_id)
+            else:
+                kb = get_kb(current_user.id, m.id)
+            s = kb.get_stats()
+            total_chunks += s.get("total_chunks", 0)
+            total_docs += s.get("document_count", 0)
+            all_docs.extend(
+                {"file_name": d.get("file_name", "unknown"), "format": d.get("metadata", {}).get("format", "")}
+                for d in kb.all_parsed_docs
+            )
+        except Exception:
+            continue
+
+    return {
+        "total_chunks": total_chunks,
+        "document_count": total_docs,
+        "documents": all_docs,
+    }
 
 
 @router.delete("/kb/clear")

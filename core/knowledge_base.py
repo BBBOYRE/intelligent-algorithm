@@ -167,10 +167,18 @@ class KnowledgeBase:
 
     def get_stats(self) -> dict[str, int]:
         try:
-            return {"total_chunks": self.collection.count()}
+            total_chunks = self.collection.count()
+            doc_count = 0
+            if total_chunks > 0:
+                result = self.collection.get(limit=total_chunks, include=["metadatas"])
+                metadatas = result.get("metadatas")
+                if metadatas:
+                    unique_sources = set(m.get("source", "") for m in metadatas if m)
+                    doc_count = len(unique_sources)
+            return {"total_chunks": total_chunks, "document_count": doc_count}
         except Exception:
-            self._rebuild_collection()
-            return {"total_chunks": self.collection.count()}
+            # 不调用 _rebuild_collection()：重建会清空数据，风险太高
+            return {"total_chunks": 0, "document_count": 0}
     # ---- 新增：提供一个便捷方法，获取所有文档的纯文本拼接 ----
     def get_full_text(self, separator: str = "\n\n") -> str:
         """从所有 parsed_doc 中提取 text 字段并拼接返回"""
